@@ -1,6 +1,16 @@
 # Public API
 
-このドキュメントは `src/index.ts` から export される公開 API のみを対象とします。
+このドキュメントは `src/index.ts` から export される公開 API のみを対象とします。規範的な lifecycle・ownership・互換性境界は [SPECIFICATION.md](SPECIFICATION.md)、文書索引は [README.md](README.md) を参照してください。
+
+## 公開 entry point
+
+| 利用形態 | Entry point |
+|---|---|
+| Git submodule の source import | repository root `index.ts` |
+| 本リポジトリ内の source/build | `src/index.ts` |
+| Build artifact | `dist/index.js` / `dist/index.d.ts` |
+
+submodule の設定例は [SUBMODULE.md](SUBMODULE.md) にあります。`src/index.ts` が export しない module への deep import は公開 API ではありません。
 
 ## インストール（ローカル開発）
 

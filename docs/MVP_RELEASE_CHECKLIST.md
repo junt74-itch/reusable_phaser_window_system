@@ -68,4 +68,4 @@ Dev server: `bun run dev` → `http://localhost:5173/` (or next free port).
 - TASK-080-R2: **closed** (automated + Chromium)
 - TASK-081-R1/R2: **closed**
 - TASK-081-R3: **closed**
-- Final gate: **closed** — see `docs/PHASE1_CLOSEOUT_PLAN.md` §7
+- Final gate: **closed** — see `docs/plan/PHASE1_CLOSEOUT_PLAN.md` §7

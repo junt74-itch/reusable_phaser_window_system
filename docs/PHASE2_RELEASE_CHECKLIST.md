@@ -6,11 +6,12 @@ Do not publish or tag. This file records automated evidence and sandbox URLs. Ch
 
 ## Automated gate
 
-- [x] `bun run check` — **168 unit tests** + typecheck + Vite build (`dist/index.js` 106.09 kB) + **6 package tests** + consumer typecheck (`readme-example.ts`, `phase2-surface.ts`)
+- [x] `bun run check` — **168 unit tests** + typecheck + Vite build (`dist/index.js` 106.09 kB) + **10 package tests** + consumer typecheck (`readme-example.ts`, `phase2-surface.ts`, `submodule-source.ts`)
 - [x] Production bundle externalizes Phaser (`dist/index.js` imports `from "phaser"`)
 - [x] Public exports fixture includes Phase 2 symbols — `tests/package/public-exports.test.ts`
 - [x] Barrel does not re-export internals (`sayPreflight`, `ScrollContentClip`, `fontFallback`, …)
 - [x] Consumer fixtures typecheck — `examples/consumer/readme-example.ts`, `examples/consumer/phase2-surface.ts`
+- [x] Git-submodule source entry, documentation navigation, and maintainer-plan isolation — repository `index.ts`, `examples/consumer/submodule-source.ts`, `docs/plan/README.md`, `tests/package/repository-access.test.ts`
 - [x] Scene routes — `tests/examples/scene-routes.test.ts` (every §10 URL key in `examples/main.ts`)
 - [x] No Phaser `Text` in `src/` or `examples/`
 - [x] `dist/index.d.ts` contains no `any`

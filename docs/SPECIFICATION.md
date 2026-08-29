@@ -1,0 +1,85 @@
+# Reusable Phaser 4 Window System specification
+
+この文書は現行実装の規範仕様です。公開 symbol のシグネチャは [API.md](API.md)、設計判断の根拠は [ADR](adr/) を参照してください。
+
+## Scope
+
+本 framework は Phaser 4 Scene 上で再利用できる window、BitmapText、入力、scroll、focus/modal の部品を提供します。ゲーム固有の inventory、dialogue graph、sound manager、localization、DOM accessibility tree は所有しません。
+
+## Stable entry points
+
+| Use | Entry point |
+|---|---|
+| Git submodule source | repository `index.ts` |
+| Repository build source | `src/index.ts` |
+| Built JavaScript | `dist/index.js` |
+| Type declarations | `dist/index.d.ts` |
+
+4つの入口は同じ公開 surface を表します。`src/index.ts` から export されない source file は internal です。
+
+## Core ownership
+
+- `WindowBase` は root/content container、theme、renderer、clipper、transition、visibility、active/enabled state、Scene shutdown cleanup を所有します。
+- 派生 window は message、selection、scroll などの domain state を所有します。
+- `WindowFocusController` は Scene が所有し、process-global singleton にはしません。
+- injected input の破棄は `ownsInput` が `true` の owner だけが行います。
+
+## Coordinates and rendering
+
+- `WindowConfig.x/y/width/height` と content bounds は整数 pixel を前提とします。
+- content child は content-local coordinates を使用します。
+- WebGL clipping が primary、Canvas は GeometryMask fallback です。
+- renderer 差し替えは `WindowBaseOptions.createRenderer` だけを通します。
+- `WindowBase` は camera resize を購読せず、Scene が `layoutWindowInViewport()` の結果を適用します。
+
+## Input contract
+
+- adapter は action、pointer、wheel、drag を意味イベントへ正規化します。
+- window は open + visible + active + enabled のときだけ入力を消費します。
+- 同じ Scene の window は通常1つの adapter を共有します。
+- focus/modal の排他制御は Scene-owned `WindowFocusController` が担当します。
+
+## Async operation contract
+
+- `say()`、`choose()`、open/close transition は完了または typed cancellation で必ず1回だけ settle します。
+- 同一 window の同種 operation を重ねると busy error になります。
+- destroy / Scene shutdown は購読を解除し、pending operation を拒否して Game Object を解放します。
+- application は cancellation を正常な lifecycle terminal path として扱います。
+
+## Text and font contract
+
+- canvas text は Phaser `BitmapText` のみを使い、Phaser `Text`、CSS font、OS font fallback は使いません。
+- font は consumer が Phaser standard loader で preload します。
+- glyph は layout 前に検査し、fallback chain を使い切ると `MissingBitmapGlyphError` を投げます。
+- scale、座標、font size は整数を基本とし、nearest-neighbor と `roundPixels` を使用します。
+
+## Extension points
+
+- chrome: `createRenderer` / `WindowRendererFactory`
+- input: `WindowInputAdapter`
+- text metrics: `BitmapTextMeasurer`
+- focus/modal: Scene-owned `WindowFocusController`
+- accessibility: `bindWindowA11y()` の意味イベントを application layer へ接続
+
+内部 helper の deep import や `WindowBase` private/protected state への依存は extension point ではありません。
+
+## Error policy
+
+設定不正、busy、destroyed、missing font/glyph/skin/portrait、layout failure、operation cancellation は公開 typed error で通知します。silent fallback や未完了 Promise は許容しません。具体的な error 一覧は [API.md](API.md) を参照してください。
+
+## Compatibility boundary
+
+互換性を保つ対象は、公開 entry point の export、公開型、本文書の lifecycle/ownership contract です。次は互換性対象外です。
+
+- `src/index.ts` に export されない module、class、function
+- `examples/` と `tests/` の構成
+- sandbox 専用 asset URL
+- internal Game Object hierarchy と private field
+
+Phaser 対応バージョンは `package.json` を正とします。公開 surface の破壊的変更は仕様書・API・consumer fixture・release checklist を同じ変更で更新します。
+
+## Verification evidence
+
+- Phase 1: [MVP_RELEASE_CHECKLIST.md](MVP_RELEASE_CHECKLIST.md)
+- Phase 2: [PHASE2_RELEASE_CHECKLIST.md](PHASE2_RELEASE_CHECKLIST.md)
+- Source/package consumers: [`examples/consumer/`](../examples/consumer/)

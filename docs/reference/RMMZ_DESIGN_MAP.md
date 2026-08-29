@@ -8,7 +8,7 @@ This document records which architectural ideas may be learned from RPG Maker MZ
 - Do not copy RMMZ source, comments, assets, windowskins, names of private fields, or implementation-specific algorithms.
 - Do not require RMMZ at build time or runtime.
 - Do not claim API, rendering, control-code, or asset compatibility.
-- When behavior is ambiguous, the public API and acceptance criteria in `docs/IMPLEMENTATION_PLAN.md` take precedence.
+- When behavior is ambiguous, the consumer-facing contract in `docs/SPECIFICATION.md` and `docs/API.md` takes precedence. Historical implementation plans under `docs/plan/` are not consumer specifications.
 
 ## Responsibility map
 

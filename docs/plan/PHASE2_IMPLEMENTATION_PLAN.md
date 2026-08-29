@@ -30,7 +30,7 @@ and all of the following hold:
 - Exactly one window in a Scene consumes confirm/cancel when a Scene-owned focus controller is used.
 - Window text remains `BitmapText` from validated `reusable_pixel_font_builder` artifacts. No Phaser `Text`, CSS/web fonts, or system-font fallback.
 
-The authoritative RMMZ *responsibility* translation remains [RMMZ_DESIGN_MAP.md](reference/RMMZ_DESIGN_MAP.md). Phase 2 is still not a port.
+The authoritative RMMZ *responsibility* translation remains [RMMZ_DESIGN_MAP.md](../reference/RMMZ_DESIGN_MAP.md). Phase 2 is still not a port.
 
 ## 2. Fixed decisions
 
@@ -158,8 +158,8 @@ Every Phase 2 task is incomplete unless its report includes a short isolation pr
 Give Composer exactly one `TASK-*` section from this document. Prefix it with:
 
 ```text
-Implement only the task below. First inspect docs/IMPLEMENTATION_PLAN.md,
-docs/PHASE2_IMPLEMENTATION_PLAN.md, and the listed dependency files.
+Implement only the task below. First inspect docs/plan/IMPLEMENTATION_PLAN.md,
+docs/plan/PHASE2_IMPLEMENTATION_PLAN.md, and the listed dependency files.
 Do not implement later tasks, reopen Phase 1 decisions, or start Phase 3.
 Do not copy RPG Maker MZ code or Window.png assets.
 Use only bitmap-font artifacts from reusable_pixel_font_builder for displayed window text.
@@ -1223,8 +1223,8 @@ Phase 2 is not complete when only unit tests pass: every browser-evidence row mu
 
 ## 12. Final gate (Phase 2 closed)
 
-- [x] TASK-100 … TASK-181 acceptance criteria are checked or explicitly blocked with evidence — see [PHASE2_RELEASE_CHECKLIST.md](PHASE2_RELEASE_CHECKLIST.md). Chromium visual rows observed 2026-08-29.
-- [x] [PHASE2_RELEASE_CHECKLIST.md](PHASE2_RELEASE_CHECKLIST.md) exists and browser rows are recorded (Chromium observed 2026-08-29 / a11y N/A / package automated).
+- [x] TASK-100 … TASK-181 acceptance criteria are checked or explicitly blocked with evidence — see [PHASE2_RELEASE_CHECKLIST.md](../PHASE2_RELEASE_CHECKLIST.md). Chromium visual rows observed 2026-08-29.
+- [x] [PHASE2_RELEASE_CHECKLIST.md](../PHASE2_RELEASE_CHECKLIST.md) exists and browser rows are recorded (Chromium observed 2026-08-29 / a11y N/A / package automated).
 - [x] No Phase 3 implementation has been started.
 - [x] `WindowBase` still has no scroll, skin, focus, portrait, or command-specific API.
 

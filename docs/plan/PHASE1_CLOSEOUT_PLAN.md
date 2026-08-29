@@ -17,7 +17,7 @@ Phase 1 is closed only when the original TASK-080 and TASK-081 acceptance criter
 | TASK-081 | `src/index.ts`, package fields, README, `docs/API.md`, `docs/MVP_RELEASE_CHECKLIST.md` exist | Acceptance criteria **not** met |
 | Phase 2 | Backlog list only | Unauthorized |
 
-`docs/IMPLEMENTATION_PLAN.md` remains the source of architecture, scope, and original task text. This file is the source of **what still must be done**.
+`docs/plan/IMPLEMENTATION_PLAN.md` remains the source of architecture, scope, and original task text. This file is the source of **what still must be done**.
 
 ## 2. Gap analysis
 
@@ -84,8 +84,8 @@ Additional closeout constraints:
 Give Composer exactly one `TASK-*` section from this document. Prefix it with:
 
 ```text
-Implement only the task below. First inspect docs/IMPLEMENTATION_PLAN.md,
-docs/PHASE1_CLOSEOUT_PLAN.md, and the listed dependency files.
+Implement only the task below. First inspect docs/plan/IMPLEMENTATION_PLAN.md,
+docs/plan/PHASE1_CLOSEOUT_PLAN.md, and the listed dependency files.
 Do not implement later tasks, change the fixed decisions, or start Phase 2.
 Use only bitmap-font artifacts from reusable_pixel_font_builder for displayed window text.
 Do not use Phaser Text or system/web-font fallback.
@@ -303,7 +303,7 @@ Close original TASK-080 and TASK-081 with recorded evidence. This is the last au
 ### Files
 
 - `docs/MVP_RELEASE_CHECKLIST.md`
-- `docs/IMPLEMENTATION_PLAN.md` (check original TASK-080 / TASK-081 boxes only when evidence exists)
+- `docs/plan/IMPLEMENTATION_PLAN.md` (check original TASK-080 / TASK-081 boxes only when evidence exists)
 - this file (check the final gate below)
 
 ### Required implementation
@@ -337,7 +337,7 @@ Manual: every sandbox URL listed in the checklist, in Chromium.
 
 - [x] TASK-080-R1 … TASK-081-R3 acceptance criteria are all checked.
 - [x] Original TASK-080 and TASK-081 in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) are checked.
-- [x] [MVP_RELEASE_CHECKLIST.md](MVP_RELEASE_CHECKLIST.md) browser evidence is recorded in Chromium.
+- [x] [MVP_RELEASE_CHECKLIST.md](../MVP_RELEASE_CHECKLIST.md) browser evidence is recorded in Chromium.
 - [x] No Phase 2 implementation has been started.
 
 Phase 2 tasks are in [PHASE2_IMPLEMENTATION_PLAN.md](PHASE2_IMPLEMENTATION_PLAN.md). Each Phase 2 task must still prove it does not force derived-specific logic back into `WindowBase`.

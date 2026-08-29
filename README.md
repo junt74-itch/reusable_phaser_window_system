@@ -2,6 +2,16 @@
 
 Phaser 4 向けの再利用可能なゲームウィンドウライブラリです。メッセージ (`MessageWindow.say`)、選択肢 (`ChoiceWindow.choose`)、コマンド / ヘルプ / ログ / ドキュメント、スクロール、NineSlice chrome、Scene 所有の focus/modal を提供します。
 
+## 最短導線
+
+- Git submodule 導入: [`docs/SUBMODULE.md`](docs/SUBMODULE.md)
+- 現行の規範仕様: [`docs/SPECIFICATION.md`](docs/SPECIFICATION.md)
+- 公開 API: [`docs/API.md`](docs/API.md)
+- 文書索引: [`docs/README.md`](docs/README.md)
+- ソース構成: [`src/README.md`](src/README.md)
+
+submodule から TypeScript source を直接使う場合の安定入口は、リポジトリ直下の [`index.ts`](index.ts) です。`src/**` への deep import は互換性保証の対象外です。
+
 ## インストールと sandbox
 
 ```bash
@@ -14,6 +24,8 @@ bun run dev
 `font:sync` は upstream の `dist/jf-dot-mplus12` から `font.png` / `font.xml` / `license.txt` / `report.json` 等を examples へコピーし、`provenance.json` に commit と SHA-256 を記録します。TTF ソースや GitHub からの runtime 取得は行いません。
 
 ブラウザ sandbox: `http://localhost:5173/?scene=integration`
+
+Git submodule として導入する場合は、検証済み commit を親リポジトリで pin し、ゲーム側から `<submodule>/index.ts` を import します。詳細と built artifact を使う代替手順は [`docs/SUBMODULE.md`](docs/SUBMODULE.md) を参照してください。
 
 | Scene | URL |
 |---|---|
@@ -160,4 +172,4 @@ chrome 差し替えは `createRenderer` + `createNineSliceWindowRenderer`（テ�
 
 ## 詳細 API
 
-[`docs/API.md`](docs/API.md) を参照してください。実装計画は [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) と [`docs/PHASE2_IMPLEMENTATION_PLAN.md`](docs/PHASE2_IMPLEMENTATION_PLAN.md)。
+現行契約は [`docs/SPECIFICATION.md`](docs/SPECIFICATION.md)、symbol と利用例は [`docs/API.md`](docs/API.md) を参照してください。文書全体の入口は [`docs/README.md`](docs/README.md) です。開発時の実装計画は援用者向け仕様ではなく、保守者用の [`docs/plan/`](docs/plan/README.md) に分離しています。
