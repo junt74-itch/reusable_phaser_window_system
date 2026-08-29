@@ -1,0 +1,69 @@
+import Phaser from "phaser";
+import type {
+  BitmapTextMeasurement,
+  BitmapTextMeasureStyle,
+  BitmapTextMeasurer,
+} from "./types.ts";
+import { BitmapFontNotLoadedError } from "./types.ts";
+
+/**
+ * Phaser-backed bitmap text measurer using loaded cache entries only.
+ */
+export class PhaserBitmapTextMeasurer implements BitmapTextMeasurer {
+  public readonly nativeFontSize: number;
+  public readonly lineHeight: number;
+  private readonly probe: Phaser.GameObjects.BitmapText;
+  private destroyed = false;
+
+  public constructor(
+    private readonly scene: Phaser.Scene,
+    public readonly fontKey: string,
+  ) {
+    const entry = scene.cache.bitmapFont.get(fontKey);
+    if (entry === undefined) {
+      throw new BitmapFontNotLoadedError(fontKey);
+    }
+    this.nativeFontSize = entry.data.size;
+    this.lineHeight = entry.data.lineHeight;
+    this.probe = scene.make.bitmapText({
+      x: -10000,
+      y: -10000,
+      font: fontKey,
+      text: "",
+      size: this.nativeFontSize,
+    });
+    this.probe.setVisible(false);
+  }
+
+  public hasGlyph(codePoint: number): boolean {
+    const entry = this.scene.cache.bitmapFont.get(this.fontKey);
+    if (entry === undefined) {
+      return false;
+    }
+    return entry.data.chars[codePoint] !== undefined;
+  }
+
+  public measure(text: string, style: BitmapTextMeasureStyle): BitmapTextMeasurement {
+    this.applyStyle(style);
+    this.probe.setText(text);
+    const bounds = this.probe.getTextBounds(true);
+    return {
+      width: Math.ceil(bounds.global.width),
+      height: Math.ceil(bounds.global.height),
+    };
+  }
+
+  public destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+    this.destroyed = true;
+    this.probe.destroy();
+  }
+
+  private applyStyle(style: BitmapTextMeasureStyle): void {
+    this.probe.setFontSize(style.fontSize);
+    this.probe.setScale(style.scale);
+    this.probe.setLetterSpacing(style.letterSpacing);
+  }
+}
