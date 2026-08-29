@@ -41,6 +41,7 @@ describe("repository source and documentation access", () => {
       "PHASE1_CLOSEOUT_PLAN.md",
       "PHASE2_IMPLEMENTATION_PLAN.md",
       "reusable-phaser4-window-system_IMPLEMENTATION_PLAN.md",
+      "TEXT_PADDING_AND_CHROMELESS_PLAN.md",
     ];
     for (const name of planFiles) {
       expect(existsSync(join(ROOT, "docs/plan", name))).toBe(true);

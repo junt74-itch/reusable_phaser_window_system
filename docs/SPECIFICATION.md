@@ -32,6 +32,28 @@
 - renderer 差し替えは `WindowBaseOptions.createRenderer` だけを通します。
 - `WindowBase` は camera resize を購読せず、Scene が `layoutWindowInViewport()` の結果を適用します。
 
+## Content padding
+
+- 文字・行ラベル・portrait・cursor・scrollbar・clip が共有する内側矩形は、外接矩形 `width`/`height` から `theme.padding` を引いた content bounds です。第二の `text.padding` はありません。
+- `padding` は非負の数値（四辺同一）または `{ top, right, bottom, left }` です。省略時は四辺とも `12`。`0` は有効です。負数・非有限は `WindowConfigError`、content が非正になる値は `WindowLayoutError` です。
+- 構築時は `WindowConfig.theme.padding`、実行時は `WindowBase.setPadding()` または `setTheme({ padding })` で変更し、派生 window は `onLayoutChanged` で再 layout します。
+- wrap 幅・選択行幅は content 幅を使います。`MessageWindow` はさらに portrait 予約幅を引きます。
+
+## Chrome visibility
+
+- 既定 chrome は `GraphicsWindowRenderer` の塗り（`backgroundColor` / `backgroundAlpha`）と枠（`borderColor` / `borderAlpha` / `borderWidth`）です。
+- Graphics の下地だけ消すには `backgroundAlpha: 0`、枠も消すには `borderWidth: 0` です。両方指定すると chrome は見えず、content（文字など）は残ります。
+- `hide()` や window 全体の `setAlpha(0)` は chrome だけでなく content も消します。下地オフではありません。
+- `createNineSliceWindowRenderer` はロード済みテクスチャを必須とし、theme の alpha / border では画像を消しません。下地画像なしにするには NineSlice factory を渡さず Graphics を `backgroundAlpha: 0` かつ `borderWidth: 0` にするか、独自 `createRenderer` を注入します。未ロードテクスチャは `MissingWindowSkinError` で、Graphics へ silent fallback しません。
+
+## Text wrapping
+
+- 本文 layout（`layoutText()`、`MessageWindow`、`HelpWindow`、`LogWindow`、`DocumentWindow`）の折り返しは常に有効です。無効化する公開オプションはありません。1 行に収めたい場合は幅・padding・文字列を変えます。
+- wrap 基準幅は content 幅です。ASCII は空白区切りの greedy wrap、幅に収まらない連続トークンと日本語などは grapheme 分割です。日本語禁則（kinsoku）はありません。
+- 明示改行は `\n`（および `\r\n` / `\r`）だけです。高さに収まらない行はページ（Message / Help）または scroll 高さ（Log / Document）へ送られます。`HelpWindow` は `pageIndex === 0` のみ描画します。
+- Choice / Command の行ラベルは `layoutText()` しません。長い label は行ボックスを横にはみ出し、clip されます。
+- 選択カーソルのリスト周回は別契約です。`SelectionControllerOptions.wrap`（省略時 `true`）は上下左右の移動が端で周回するかです。文字折り返しとは独立です。
+
 ## Input contract
 
 - adapter は action、pointer、wheel、drag を意味イベントへ正規化します。
@@ -52,6 +74,7 @@
 - font は consumer が Phaser standard loader で preload します。
 - glyph は layout 前に検査し、fallback chain を使い切ると `MissingBitmapGlyphError` を投げます。
 - scale、座標、font size は整数を基本とし、nearest-neighbor と `roundPixels` を使用します。
+- 本文の折り返し契約は [Text wrapping](#text-wrapping) を正とします。
 
 ## Extension points
 

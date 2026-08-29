@@ -46,6 +46,7 @@ Git submodule として導入する場合は、検証済み commit を親リポ�
 | Focus + modal | `?scene=focus-modal` |
 | Message portrait | `?scene=message-portrait` |
 | Font fallback | `?scene=font-fallback` |
+| Padding + chromeless preview | `?scene=padding-chrome` |
 
 ## Scene セットアップ
 

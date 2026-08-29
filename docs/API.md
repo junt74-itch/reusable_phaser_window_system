@@ -173,7 +173,7 @@ await choiceWindow.choose([
 ]);
 ```
 
-長いリストは `showScrollbar: true` を付けるとつまみ付きでスクロールします。Phase 1 の行数超過 configuration error は出ません。
+長いリストは `showScrollbar: true` を付けるとつまみ付きでスクロールします。Phase 1 の行数超過 configuration error は出ません。構築時 `wrap: false` で選択カーソルはリスト端で止まります（省略時は周回）。行 `label` 自体は折り返しません。
 
 ## Scroll
 
@@ -209,7 +209,7 @@ Help の更新は Scene が `onHighlight` で `helpWindow.setHelp(...)` しま�
 
 - `logWindow.append(line)` — 末尾に BitmapText を追加。既に最下部にいるときだけ追従
 - `logWindow.clear()`
-- `documentWindow.setDocument(text)` — 全文を wrap して content height を設定。入力は page/wheel/drag のみ（typewriter なし）
+- `documentWindow.setDocument(text)` — 全文を content 幅で wrap して content height を設定。入力は page/wheel/drag のみ（typewriter なし）。wrap をオフにはできない
 
 欠損グリフは既存の `MissingBitmapGlyphError` です。
 
@@ -236,12 +236,57 @@ Dimmer Graphics は Scene 所有です。`subscribe` の `snapshot.modal` で表
 主なフィールド:
 
 - `backgroundColor`, `backgroundAlpha`, `borderColor`, `borderAlpha`, `borderWidth`
-- `padding` — 数値または `{ top, right, bottom, left }`
+- `padding` — 数値（四辺同一）または `{ top, right, bottom, left }`。省略時は四辺 `12`。`0` 可。負数は `WindowConfigError`、content が非正なら `WindowLayoutError`
 - `text` — `fontKey`, `fontKeys`（primary が先頭。省略時は `[fontKey]`）, `fontSize`, `scale`, `tint`, `letterSpacing`, `lineSpacing`
 - `cursor` — 選択カーソル色/幅。`blinkPeriodMs` は省略時 `0`（点滅なし）。点滅は `CursorRenderer` が所有し、`WindowBase` には載せない
 - `transitionDurationMs`
 
+padding はウインドウ外接矩形から content を inset します。文字・行・portrait・cursor・scrollbar・clip が同じ矩形を共有します。`text.padding` はありません。
+
+```ts
+const theme = resolveWindowTheme({
+  padding: { top: 8, right: 16, bottom: 8, left: 16 },
+  text: { fontKey: DEFAULT_BITMAP_FONT_ASSET.key },
+});
+window.setPadding(0);
+window.setPadding({ top: 12, right: 20, bottom: 12, left: 20 });
+```
+
 `TextWindowBase.setFontKey(key)` はアイドル時に primary を差し替え、残りの `fontKeys` をフォールバックとして残します。`say` / `choose` / `chooseCommands` 中は `FontSwapBusyError` で拒否し、進行中 Promise は維持します。Help / Message / Log / Document の本文と Choice / Command の行ラベルは同じチェーンを使い、尽きると `MissingBitmapGlyphError.triedKeys` を付けて throw します。システム/web フォントへは落ちません。`WindowBase` にフォントマップはありません。
+
+## 下地（chrome）の無効
+
+Graphics 既定 renderer では、塗りと枠を theme で消します。content は残ります。
+
+```ts
+window.setTheme({ backgroundAlpha: 0, borderWidth: 0 });
+```
+
+- `backgroundAlpha: 0` — 下地の塗りだけ消す（枠は `borderWidth` が正なら残る）
+- `borderWidth: 0` — 枠の stroke を描かない
+- `hide()` / ウインドウ全体の `setAlpha(0)` — 文字も含めて消える。下地オフではない
+
+NineSlice（`createNineSliceWindowRenderer`）はテクスチャ必須で、`backgroundAlpha` では画像を消しません。下地画像なしにするには factory を渡さず、上記の Graphics 設定を使います。未ロードは `MissingWindowSkinError` です。
+
+sandbox: `?scene=padding-chrome`（`[` `]` で padding、`H` で左上 Graphics の塗りと枠を切替）。
+
+## 文字の折り返し
+
+本文の折り返しは常に有効です。`layoutText()` および Message / Help / Log / Document に wrap をオフにするオプションはありません。
+
+- 基準幅は content 幅（padding 適用後）。Message は portrait 予約幅をさらに引く
+- ASCII は空白区切りの greedy wrap。収まらない語と日本語などは grapheme 分割。禁則なし
+- 明示改行は `\n`（`\r\n` / `\r` も正規化）
+- 高さ超過: Message は次ページ、Help は page 0 のみ描画、Log / Document は scroll 高さへ積む
+- Choice / Command の `label` は折り返さず、行幅を超えると clip される
+
+1 行に収めたいときはウインドウを広くする、padding を減らす、文字列を短くする、のいずれかです。
+
+選択リストの周回は別です。構築時 `wrap: false` で端から反対側へ回りません（省略時 `true`）。
+
+```ts
+new ChoiceWindow(scene, config, { wrap: false, input, ownsInput: true });
+```
 
 ## ウィンドウ chrome の差し替え
 
@@ -276,6 +321,7 @@ new WindowBase(scene, config, {
 | `activate()` / `deactivate()` | 入力対象切替 |
 | `enable()` / `disable()` | 操作不能化 |
 | `setSize()` / `setPosition()` | レイアウト再計算。カメラ購読はせず、Scene が `layoutWindowInViewport` の整数 bounds を渡す |
+| `setPadding()` | content inset を変更して relayout。数値または四辺オブジェクト |
 | `destroy()` | 全リソース解放。pending Promise は cancel/destroyed で 1 回 settle |
 | `isDestroyed()` | destroy 後は true |
 | `subscribeTransition` | open/close の phase 変化。a11y 専用ではない |
@@ -341,6 +387,8 @@ const unbind = bindWindowA11y({
 [`PHASE2_RELEASE_CHECKLIST.md`](PHASE2_RELEASE_CHECKLIST.md) を参照:
 
 - 日本語禁則（kinsoku）なし
+- 本文折り返しを無効化する公開オプションなし（常時 wrap）
+- NineSlice chrome を theme だけで非表示にする API なし（Graphics は `backgroundAlpha` / `borderWidth`）
 - グローバル `WindowManager` singleton なし（Scene 所有の `WindowFocusController` はある）
 - ゲームパッドは first pad only
 - a11y は意味イベントのみ。DOM / screen-reader overlay なし

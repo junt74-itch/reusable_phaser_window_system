@@ -20,6 +20,7 @@ export const ALL_SCENE_KEYS = [
   "clipping",
   "bitmap-font",
   ...PHASE2_SCENE_KEYS,
+  "padding-chrome",
 ] as const;
 
 export type SceneKey = (typeof ALL_SCENE_KEYS)[number];

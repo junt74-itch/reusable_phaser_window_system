@@ -15,6 +15,7 @@ import { LogDocumentScene } from "./scenes/LogDocumentScene.ts";
 import { FocusModalScene } from "./scenes/FocusModalScene.ts";
 import { MessagePortraitScene } from "./scenes/MessagePortraitScene.ts";
 import { FontFallbackScene } from "./scenes/FontFallbackScene.ts";
+import { PaddingChromeScene } from "./scenes/PaddingChromeScene.ts";
 
 const scenario = new URLSearchParams(window.location.search).get("scene") ?? "integration";
 
@@ -34,6 +35,7 @@ const scenes: Record<(typeof ALL_SCENE_KEYS)[number], typeof Phaser.Scene> = {
   "focus-modal": FocusModalScene,
   "message-portrait": MessagePortraitScene,
   "font-fallback": FontFallbackScene,
+  "padding-chrome": PaddingChromeScene,
 };
 
 const SelectedScene = scenes[scenario as keyof typeof scenes] ?? IntegrationScene;

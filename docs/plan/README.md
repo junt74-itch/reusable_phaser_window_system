@@ -10,6 +10,12 @@
 - class、option、error の利用方法は [`../API.md`](../API.md) を参照してください。
 - 実装済み範囲の検証証跡は [`../MVP_RELEASE_CHECKLIST.md`](../MVP_RELEASE_CHECKLIST.md) と [`../PHASE2_RELEASE_CHECKLIST.md`](../PHASE2_RELEASE_CHECKLIST.md) を参照してください。
 
+## Active plans
+
+実装エージェントは次の文書だけを作業指示として使います。完了後は Archived へ移すか、チェックボックスを更新します。
+
+- [TEXT_PADDING_AND_CHROMELESS_PLAN.md](TEXT_PADDING_AND_CHROMELESS_PLAN.md) — 文字 content padding の公開契約と下地 chrome なし
+
 ## Archived plans
 
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) — Phase 1 WBS
