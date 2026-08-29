@@ -12,6 +12,7 @@ export interface WindowPadding {
 /** Bitmap text style resolved for window rendering. */
 export interface BitmapTextStyle {
   readonly fontKey: string;
+  readonly fontKeys: readonly string[];
   readonly fontSize: number;
   readonly scale: number;
   readonly tint: number;
@@ -25,6 +26,8 @@ export interface CursorStyle {
   readonly alpha: number;
   readonly width: number;
   readonly padding: number;
+  /** 0 disables blink. Owned by CursorRenderer, not WindowBase. */
+  readonly blinkPeriodMs: number;
 }
 
 /** Partial theme supplied by consumers. */

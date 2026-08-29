@@ -39,4 +39,27 @@ describe("SelectionController", () => {
     expect(controller.selectIndex(1)).toBe(true);
     expect(controller.getSelectedIndex()).toBe(1);
   });
+
+  test("optional confirm and cancel hooks fire once and not after dispose", () => {
+    let confirms = 0;
+    let cancels = 0;
+    const controller = new SelectionController<string>({
+      onConfirm: () => {
+        confirms += 1;
+      },
+      onCancel: () => {
+        cancels += 1;
+      },
+    });
+    controller.setItems(items);
+    expect(controller.confirm()).toBe(true);
+    controller.cancel();
+    expect(confirms).toBe(1);
+    expect(cancels).toBe(1);
+    controller.dispose();
+    expect(controller.confirm()).toBe(false);
+    controller.cancel();
+    expect(confirms).toBe(1);
+    expect(cancels).toBe(1);
+  });
 });

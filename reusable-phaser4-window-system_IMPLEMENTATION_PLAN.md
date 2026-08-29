@@ -493,6 +493,8 @@ const result = await choiceWindow.choose(["A", "B", "C"]);
 
 ## 20. Phase 2
 
+実行可能なタスク分割は [docs/PHASE2_IMPLEMENTATION_PLAN.md](docs/PHASE2_IMPLEMENTATION_PLAN.md) を正とする。
+
 - ScrollableWindow
 - ScrollController
 - scrollbar

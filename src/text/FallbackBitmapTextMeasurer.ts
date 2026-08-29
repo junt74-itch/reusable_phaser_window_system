@@ -1,0 +1,95 @@
+import type {
+  BitmapTextMeasurement,
+  BitmapTextMeasureStyle,
+  BitmapTextMeasurer,
+  OwnedBitmapTextMeasurer,
+} from "./types.ts";
+import { PhaserBitmapTextMeasurer } from "./PhaserBitmapTextMeasurer.ts";
+import { splitTextFontRuns } from "./fontFallback.ts";
+
+/**
+ * Measures mixed-glyph strings by walking an application-supplied builder-font chain.
+ * Never consults a system or web font.
+ */
+export class FallbackBitmapTextMeasurer implements OwnedBitmapTextMeasurer {
+  public readonly fontKey: string;
+  public readonly fontKeys: readonly string[];
+  public readonly nativeFontSize: number;
+  public readonly lineHeight: number;
+  private readonly byKey: ReadonlyMap<string, BitmapTextMeasurer>;
+  private destroyed = false;
+
+  public constructor(private readonly chain: readonly OwnedBitmapTextMeasurer[]) {
+    const primary = chain[0];
+    if (primary === undefined) {
+      throw new Error("FallbackBitmapTextMeasurer requires at least one measurer.");
+    }
+    this.fontKey = primary.fontKey;
+    this.fontKeys = chain.map((entry) => entry.fontKey);
+    this.nativeFontSize = primary.nativeFontSize;
+    this.lineHeight = chain.reduce(
+      (max, entry) => (entry.lineHeight > max ? entry.lineHeight : max),
+      primary.lineHeight,
+    );
+    this.byKey = new Map(chain.map((entry) => [entry.fontKey, entry]));
+  }
+
+  public hasGlyph(codePoint: number): boolean {
+    return this.chain.some((entry) => entry.hasGlyph(codePoint));
+  }
+
+  public fontKeyFor(codePoint: number): string {
+    const found = this.chain.find((entry) => entry.hasGlyph(codePoint));
+    return found?.fontKey ?? this.fontKey;
+  }
+
+  public measure(text: string, style: BitmapTextMeasureStyle): BitmapTextMeasurement {
+    if (text.length === 0) {
+      return { width: 0, height: 0 };
+    }
+    const runs = splitTextFontRuns(text, (codePoint) => this.fontKeyFor(codePoint), this.fontKey);
+    let width = 0;
+    let height = 0;
+    for (let index = 0; index < runs.length; index += 1) {
+      const run = runs[index];
+      if (run === undefined) {
+        continue;
+      }
+      const measurer = this.byKey.get(run.fontKey) ?? this.chain[0];
+      if (measurer === undefined) {
+        continue;
+      }
+      const measured = measurer.measure(run.text, { ...style, fontKey: run.fontKey });
+      width += measured.width;
+      height = Math.max(height, measured.height);
+      if (index < runs.length - 1 && style.letterSpacing !== 0) {
+        width += style.letterSpacing * style.scale;
+      }
+    }
+    return { width, height };
+  }
+
+  public destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+    this.destroyed = true;
+    for (const entry of this.chain) {
+      entry.destroy();
+    }
+  }
+}
+
+export function createBitmapTextMeasurer(
+  scene: import("phaser").Scene,
+  fontKeys: readonly string[],
+): OwnedBitmapTextMeasurer {
+  const chain = fontKeys.map((fontKey) => new PhaserBitmapTextMeasurer(scene, fontKey));
+  if (chain.length === 1) {
+    const only = chain[0];
+    if (only !== undefined) {
+      return only;
+    }
+  }
+  return new FallbackBitmapTextMeasurer(chain);
+}

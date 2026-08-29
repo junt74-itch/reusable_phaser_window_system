@@ -22,6 +22,7 @@ const style: BitmapTextMeasureStyle = {
 
 class FakeMeasurer implements BitmapTextMeasurer {
   public readonly fontKey = "test";
+  public readonly fontKeys = ["test"] as const;
   public readonly nativeFontSize = 12;
   public readonly lineHeight = 14;
   private readonly supported = new Set<number>();
@@ -37,6 +38,10 @@ class FakeMeasurer implements BitmapTextMeasurer {
 
   public hasGlyph(codePoint: number): boolean {
     return this.supported.has(codePoint);
+  }
+
+  public fontKeyFor(_codePoint: number): string {
+    return this.fontKey;
   }
 
   public measure(text: string, measureStyle: BitmapTextMeasureStyle): { width: number; height: number } {

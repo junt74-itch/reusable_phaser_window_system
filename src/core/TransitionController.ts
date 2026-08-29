@@ -6,6 +6,12 @@ export interface TransitionState {
   readonly openness: number;
 }
 
+export interface TransitionSubscription {
+  unsubscribe(): void;
+}
+
+type TransitionListener = (state: TransitionState) => void;
+
 type TransitionTarget = "open" | "closed";
 
 interface PendingTransition {
@@ -23,14 +29,28 @@ interface PendingTransition {
  */
 export class TransitionController {
   private phase: WindowPhase = "closed";
+  private emittedPhase: WindowPhase = "closed";
   private openness = 0;
   private pending: PendingTransition | null = null;
   private disposed = false;
+  private readonly listeners = new Set<TransitionListener>();
 
   public constructor(private readonly defaultDurationMs: number) {}
 
   public getState(): TransitionState {
     return { phase: this.phase, openness: this.openness };
+  }
+
+  public subscribe(listener: TransitionListener): TransitionSubscription {
+    if (this.disposed) {
+      return { unsubscribe: () => undefined };
+    }
+    this.listeners.add(listener);
+    return {
+      unsubscribe: () => {
+        this.listeners.delete(listener);
+      },
+    };
   }
 
   public open(durationMs?: number): Promise<void> {
@@ -56,11 +76,13 @@ export class TransitionController {
       pending.startOpenness + (pending.endOpenness - pending.startOpenness) * progress,
     );
     this.phase = pending.target === "open" ? "opening" : "closing";
+    this.emitIfPhaseChanged();
 
     if (progress >= 1) {
       this.openness = pending.endOpenness;
       this.phase = pending.target === "open" ? "open" : "closed";
       this.pending = null;
+      this.emitIfPhaseChanged();
       pending.resolve();
     }
   }
@@ -73,6 +95,8 @@ export class TransitionController {
     this.cancelPending(new WindowOperationCancelledError(reason));
     this.phase = "closed";
     this.openness = 0;
+    this.emitIfPhaseChanged();
+    this.listeners.clear();
   }
 
   private startTransition(
@@ -114,6 +138,7 @@ export class TransitionController {
     if (durationMs === 0 || this.openness === endOpenness) {
       this.openness = endOpenness;
       this.phase = target === "open" ? "open" : "closed";
+      this.emitIfPhaseChanged();
       return Promise.resolve();
     }
 
@@ -128,7 +153,19 @@ export class TransitionController {
         reject: (error: Error) => reject(error),
       };
       this.phase = target === "open" ? "opening" : "closing";
+      this.emitIfPhaseChanged();
     });
+  }
+
+  private emitIfPhaseChanged(): void {
+    if (this.emittedPhase === this.phase) {
+      return;
+    }
+    this.emittedPhase = this.phase;
+    const state = this.getState();
+    for (const listener of [...this.listeners]) {
+      listener(state);
+    }
   }
 
   private cancelPending(error: WindowOperationCancelledError): void {

@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { preloadDefaultBitmapFont } from "../preloadDefaultBitmapFont.ts";
 import { DEFAULT_BITMAP_FONT_ASSET } from "../../src/text/BitmapFontAsset.ts";
 import { ChoiceWindow } from "../../src/choice/ChoiceWindow.ts";
 import { PhaserWindowInput } from "../../src/input/PhaserWindowInput.ts";
@@ -13,15 +14,12 @@ export class ChoiceScene extends Phaser.Scene {
   }
 
   public preload(): void {
-    this.load.bitmapFont(
-      DEFAULT_BITMAP_FONT_ASSET.key,
-      DEFAULT_BITMAP_FONT_ASSET.textureURL,
-      DEFAULT_BITMAP_FONT_ASSET.fontDataURL,
-    );
+    preloadDefaultBitmapFont(this);
   }
 
   public create(): void {
     this.cameras.main.setBackgroundColor(0x101820);
+    this.cameras.main.roundPixels = true;
     this.windowInput = new PhaserWindowInput(this);
     this.choiceWindow = new ChoiceWindow(
       this,

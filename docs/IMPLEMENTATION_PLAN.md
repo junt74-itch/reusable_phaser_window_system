@@ -4,6 +4,9 @@ Last reviewed: 2026-08-29
 Execution target: Cursor Composer 2.5, one task at a time  
 Baseline: Bun 1.3+, TypeScript strict mode, Vite, Phaser 4.2.1
 
+Phase 1 closeout: [PHASE1_CLOSEOUT_PLAN.md](PHASE1_CLOSEOUT_PLAN.md).
+Phase 2 tasks: [PHASE2_IMPLEMENTATION_PLAN.md](PHASE2_IMPLEMENTATION_PLAN.md). Do not start Phase 3 until that document's final gate is checked.
+
 Bitmap-font source: [`junt74-itch/reusable_pixel_font_builder`](https://github.com/junt74-itch/reusable_pixel_font_builder), inspected at commit `20fa374ba24d3d70ff7437ab39532f28261f45f5`
 
 ## 1. Outcome
@@ -238,10 +241,10 @@ Define the stable value types shared by the renderer and `WindowBase`, including
 
 ### Acceptance Criteria
 
-- [ ] Default resolution is deterministic and caller objects remain unchanged.
-- [ ] Zero/negative dimensions, negative padding/border width/duration, NaN, and Infinity fail tests.
-- [ ] Content width/height can later be calculated from resolved four-sided padding.
-- [ ] Public types and resolver/validator are exported.
+- [x] Default resolution is deterministic and caller objects remain unchanged.
+- [x] Zero/negative dimensions, negative padding/border width/duration, NaN, and Infinity fail tests.
+- [x] Content width/height can later be calculated from resolved four-sided padding.
+- [x] Public types and resolver/validator are exported.
 
 ### Verification
 
@@ -277,10 +280,10 @@ Implement interruptible open/close phase progression without Phaser tweens or wa
 
 ### Acceptance Criteria
 
-- [ ] Closed/open boundaries and all four phases are tested.
-- [ ] Reversal preserves openness continuity.
-- [ ] Promise settlement cannot occur twice.
-- [ ] No imports from Phaser and no real timers.
+- [x] Closed/open boundaries and all four phases are tested.
+- [x] Reversal preserves openness continuity.
+- [x] Promise settlement cannot occur twice.
+- [x] No imports from Phaser and no real timers.
 
 ### Verification
 
@@ -316,10 +319,10 @@ Render background and border as replaceable local-coordinate parts, independentl
 
 ### Acceptance Criteria
 
-- [ ] Resize clears old commands before redraw and preserves fixed child order.
-- [ ] Theme changes redraw once and do not recreate the root container.
-- [ ] Repeated destroy is harmless.
-- [ ] Renderer has no input or Scene lifecycle subscriptions.
+- [x] Resize clears old commands before redraw and preserves fixed child order.
+- [x] Theme changes redraw once and do not recreate the root container.
+- [x] Repeated destroy is harmless.
+- [x] Renderer has no input or Scene lifecycle subscriptions.
 
 ### Verification
 
@@ -355,10 +358,10 @@ Prove the exact Phaser 4.2.1 API and coordinate behavior needed to clip a moving
 
 ### Acceptance Criteria
 
-- [ ] ADR contains tested renderer, browser, exact API calls, coordinate conclusions, cleanup steps, and rejected alternatives.
-- [ ] Spike visibly clips animated overflow before and after move/resize.
-- [ ] No production abstraction is implemented in this task.
-- [ ] No API is inferred from Phaser 3 documentation alone.
+- [x] ADR contains tested renderer, browser, exact API calls, coordinate conclusions, cleanup steps, and rejected alternatives.
+- [x] Spike visibly clips animated overflow before and after move/resize.
+- [x] No production abstraction is implemented in this task.
+- [x] No API is inferred from Phaser 3 documentation alone.
 
 ### Verification
 
@@ -395,10 +398,10 @@ Encapsulate the proven clipping path so all derived windows remain unaware of Ph
 
 ### Acceptance Criteria
 
-- [ ] Move, resize, repeated enable/disable, and destroy are covered.
-- [ ] Unsupported renderer behavior is explicit and tested.
-- [ ] Derived windows need no imports from Phaser mask/filter namespaces.
-- [ ] Browser scenario still passes after using the production adapter.
+- [x] Move, resize, repeated enable/disable, and destroy are covered.
+- [x] Unsupported renderer behavior is explicit and tested.
+- [x] Derived windows need no imports from Phaser mask/filter namespaces.
+- [x] Browser scenario still passes after using the production adapter.
 
 ### Verification
 
@@ -437,10 +440,10 @@ Define normalized action/pointer events and deterministic repeat semantics indep
 
 ### Acceptance Criteria
 
-- [ ] Multiple subscribers unsubscribe independently.
-- [ ] Disposed adapters emit nothing.
-- [ ] Events are readonly snapshots.
-- [ ] Domain consumers can be fully tested with the manual adapter.
+- [x] Multiple subscribers unsubscribe independently.
+- [x] Disposed adapters emit nothing.
+- [x] Events are readonly snapshots.
+- [x] Domain consumers can be fully tested with the manual adapter.
 
 ### Verification
 
@@ -475,10 +478,10 @@ Bind Phaser keyboard/pointer/touch events to the normalized contract, scoped to 
 
 ### Acceptance Criteria
 
-- [ ] Key down/hold/up and pointer events map correctly in structural tests.
-- [ ] Text-input/browser default prevention is limited to explicitly consumed game inputs.
-- [ ] Two adapters can coexist; disposing one does not disable the other.
-- [ ] Scene restart does not duplicate callbacks.
+- [x] Key down/hold/up and pointer events map correctly in structural tests.
+- [x] Text-input/browser default prevention is limited to explicitly consumed game inputs.
+- [x] Two adapters can coexist; disposing one does not disable the other.
+- [x] Scene restart does not duplicate callbacks.
 
 ### Verification
 
@@ -512,9 +515,9 @@ Add opt-in gamepad polling with edge/repeat semantics matching keyboard input.
 
 ### Acceptance Criteria
 
-- [ ] Dead-zone boundaries and reconnect are tested.
-- [ ] Keyboard and gamepad can alternate without stuck actions.
-- [ ] Gamepad support can be disabled without creating listeners/poll state.
+- [x] Dead-zone boundaries and reconnect are tested.
+- [x] Keyboard and gamepad can alternate without stuck actions.
+- [x] Gamepad support can be disabled without creating listeners/poll state.
 
 ### Verification
 
@@ -552,11 +555,11 @@ Implement the only owner of common window geometry, visual state, content placem
 
 ### Acceptance Criteria
 
-- [ ] Position affects root only; resize/padding recompute renderer and clip bounds once.
-- [ ] Content dimensions never become negative; too-small sizes fail validation.
-- [ ] Alpha, visibility, depth, active, and enabled are independent.
-- [ ] Closed windows cannot consume input even if active.
-- [ ] No message, selection, scrolling, or game-specific behavior exists here.
+- [x] Position affects root only; resize/padding recompute renderer and clip bounds once.
+- [x] Content dimensions never become negative; too-small sizes fail validation.
+- [x] Alpha, visibility, depth, active, and enabled are independent.
+- [x] Closed windows cannot consume input even if active.
+- [x] No message, selection, scrolling, or game-specific behavior exists here.
 
 ### Verification
 
@@ -590,10 +593,10 @@ Make teardown correct under manual destroy, Scene shutdown, and Scene restart.
 
 ### Acceptance Criteria
 
-- [ ] Manual destroy followed by Scene shutdown is harmless.
-- [ ] Scene shutdown settles open/close promises and leaves no callbacks.
-- [ ] Scene restart with a new window produces one input reaction per event.
-- [ ] Destroy ownership for every injected dependency is tested.
+- [x] Manual destroy followed by Scene shutdown is harmless.
+- [x] Scene shutdown settles open/close promises and leaves no callbacks.
+- [x] Scene restart with a new window produces one input reaction per event.
+- [x] Destroy ownership for every injected dependency is tested.
 
 ### Verification
 
@@ -621,10 +624,10 @@ Visually prove base layout, clipping, open/close, move/resize, and lifecycle beh
 
 ### Acceptance Criteria
 
-- [ ] This pre-font base scenario creates no canvas text. Controls are documented in surrounding HTML/README, while canvas feedback uses shapes and color changes only.
-- [ ] Overflowing animated content is clipped while moving/resizing.
-- [ ] Open/close can reverse without jumping.
-- [ ] Restarting the lifecycle scene repeatedly creates no duplicate input or visible orphan objects.
+- [x] This pre-font base scenario creates no canvas text. Controls are documented in surrounding HTML/README, while canvas feedback uses shapes and color changes only.
+- [x] Overflowing animated content is clipped while moving/resizing.
+- [x] Open/close can reverse without jumping.
+- [x] Restarting the lifecycle scene repeatedly creates no duplicate input or visible orphan objects.
 
 ### Verification
 
@@ -676,10 +679,10 @@ Bring one reproducible Phaser-ready font artifact into the examples without vend
 
 ### Acceptance Criteria
 
-- [ ] A valid checkout at the inspected commit produces the six example files plus provenance deterministically except for the documented timestamp.
-- [ ] Missing files, multiple pages, invalid report flags, hash mismatch, and the obsolete output layout fail tests before partial destination replacement.
-- [ ] Sync is atomic at the font-directory level and does not delete unrelated fonts.
-- [ ] Example/runtime code never reads from GitHub and never requires Python/uv.
+- [x] A valid checkout at the inspected commit produces the six example files plus provenance deterministically except for the documented timestamp.
+- [x] Missing files, multiple pages, invalid report flags, hash mismatch, and the obsolete output layout fail tests before partial destination replacement.
+- [x] Sync is atomic at the font-directory level and does not delete unrelated fonts.
+- [x] Example/runtime code never reads from GitHub and never requires Python/uv.
 
 ### Verification
 
@@ -718,10 +721,10 @@ Prove that the synced `font.png` + `font.xml` load directly through Phaser 4.2.1
 
 ### Acceptance Criteria
 
-- [ ] `font.png` and BMFont XML load without a custom parser/converter or loader warning.
-- [ ] Japanese sample text renders from `BitmapText`, and the Scene contains zero Phaser `Text` objects.
-- [ ] ADR records loader call, cache lookup, measurement call, sampling/rounding setup, lifecycle ownership, browser/renderer, and tested upstream commit.
-- [ ] Any mismatch between XML/report and actual Phaser metrics is recorded before TASK-050 begins.
+- [x] `font.png` and BMFont XML load without a custom parser/converter or loader warning.
+- [x] Japanese sample text renders from `BitmapText`, and the Scene contains zero Phaser `Text` objects.
+- [x] ADR records loader call, cache lookup, measurement call, sampling/rounding setup, lifecycle ownership, browser/renderer, and tested upstream commit.
+- [x] Any mismatch between XML/report and actual Phaser metrics is recorded before TASK-050 begins.
 
 ### Verification
 
@@ -762,10 +765,10 @@ Wrap pre-measured Unicode text into lines/pages using the glyph coverage and adv
 
 ### Acceptance Criteria
 
-- [ ] ASCII words, long words, supported Japanese, blank lines, trailing newline, and empty text are tested with deterministic fake bitmap metrics.
-- [ ] Unsupported emoji and known missing upstream glyph `U+2022` (`•`) produce `MissingBitmapGlyphError` before any line is returned.
-- [ ] Layout is deterministic and has no Phaser import.
-- [ ] No source characters are lost or reordered.
+- [x] ASCII words, long words, supported Japanese, blank lines, trailing newline, and empty text are tested with deterministic fake bitmap metrics.
+- [x] Unsupported emoji and known missing upstream glyph `U+2022` (`•`) produce `MissingBitmapGlyphError` before any line is returned.
+- [x] Layout is deterministic and has no Phaser import.
+- [x] No source characters are lost or reordered.
 
 ### Verification
 
@@ -807,11 +810,11 @@ Create reusable bitmap-text-area rendering and measurement without message progr
 
 ### Acceptance Criteria
 
-- [ ] Japanese and ASCII use the loaded `jf-dot-mplus12` cache entry; missing font/glyph failures are typed and no fallback stack exists.
-- [ ] Resize causes re-layout and clips old overflow.
-- [ ] Clear/destroy releases all owned BitmapText objects but does not delete the shared cache entry/texture.
-- [ ] Base class remains useful for a future HelpWindow.
-- [ ] A source scan/test proves no Phaser `Text` construction exists in `src/` or canvas examples.
+- [x] Japanese and ASCII use the loaded `jf-dot-mplus12` cache entry; missing font/glyph failures are typed and no fallback stack exists.
+- [x] Resize causes re-layout and clips old overflow.
+- [x] Clear/destroy releases all owned BitmapText objects but does not delete the shared cache entry/texture.
+- [x] Base class remains useful for a future HelpWindow.
+- [x] A source scan/test proves no Phaser `Text` construction exists in `src/` or canvas examples.
 
 ### Verification
 
@@ -847,9 +850,9 @@ Parse MVP message syntax into immutable tokens without rendering or timing.
 
 ### Acceptance Criteria
 
-- [ ] Empty text, mixed Japanese, escaping, adjacent directives, invalid waits, and form feed are tested.
-- [ ] Token source ranges make parse/layout errors diagnosable.
-- [ ] Parser has no Phaser/global state import.
+- [x] Empty text, mixed Japanese, escaping, adjacent directives, invalid waits, and form feed are tested.
+- [x] Token source ranges make parse/layout errors diagnosable.
+- [x] Parser has no Phaser/global state import.
 
 ### Verification
 
@@ -883,9 +886,9 @@ Represent message reveal/page/wait progress as deterministic pure state transiti
 
 ### Acceptance Criteria
 
-- [ ] Frame-rate-independent progression is tested with split vs combined deltas.
-- [ ] Wait, pause, explicit page, auto page capacity, skip, empty message, and final completion are tested.
-- [ ] State and effects are immutable and Phaser-free.
+- [x] Frame-rate-independent progression is tested with split vs combined deltas.
+- [x] Wait, pause, explicit page, auto page capacity, skip, empty message, and final completion are tested.
+- [x] State and effects are immutable and Phaser-free.
 
 ### Verification
 
@@ -920,9 +923,9 @@ Own one message operation and coordinate parser/layout state with semantic input
 
 ### Acceptance Criteria
 
-- [ ] Busy, normal completion, cancel, dispose, skip, waits, and duplicate input are tested.
-- [ ] All input subscriptions are released when idle/disposed.
-- [ ] No Phaser imports or real timers.
+- [x] Busy, normal completion, cancel, dispose, skip, waits, and duplicate input are tested.
+- [x] All input subscriptions are released when idle/disposed.
+- [x] No Phaser imports or real timers.
 
 ### Verification
 
@@ -960,10 +963,10 @@ Expose the first concrete API, `say(speaker, text, options?)`, by composing text
 
 ### Acceptance Criteria
 
-- [ ] Japanese typewriter, wrapping, newline, multiple pages, wait, pause, skip, resize, and completion work.
-- [ ] Repeated `say` is rejected while busy and succeeds after completion.
-- [ ] MessageWindow contains no choice/dialogue-branch logic.
-- [ ] Public API exports only concrete/request/result/error types needed by consumers.
+- [x] Japanese typewriter, wrapping, newline, multiple pages, wait, pause, skip, resize, and completion work.
+- [x] Repeated `say` is rejected while busy and succeeds after completion.
+- [x] MessageWindow contains no choice/dialogue-branch logic.
+- [x] Public API exports only concrete/request/result/error types needed by consumers.
 
 ### Verification
 
@@ -990,11 +993,11 @@ Demonstrate all MessageWindow acceptance paths through visible controls and scri
 
 ### Acceptance Criteria
 
-- [ ] Scene `preload()` loads the synced default font with `this.load.bitmapFont` before constructing `MessageWindow`.
-- [ ] On-screen instructions list keyboard, pointer/touch, and gamepad controls.
-- [ ] Samples cover Japanese wrap, explicit newline/page, wait/pause, skip, reversal, and resize.
-- [ ] Completion/cancellation results appear in an on-screen event log.
-- [ ] Scene restart during `say()` leaves no orphan promise/listener/object.
+- [x] Scene `preload()` loads the synced default font with `this.load.bitmapFont` before constructing `MessageWindow`.
+- [x] On-screen instructions list keyboard, pointer/touch, and gamepad controls.
+- [x] Samples cover Japanese wrap, explicit newline/page, wait/pause, skip, reversal, and resize.
+- [x] Completion/cancellation results appear in an on-screen event log.
+- [x] Scene restart during `say()` leaves no orphan promise/listener/object.
 
 ### Verification
 
@@ -1031,9 +1034,9 @@ Implement Phaser-free item/index movement, disabled-item skipping, and typed sel
 
 ### Acceptance Criteria
 
-- [ ] Empty, one item, all disabled, gaps, boundaries, wrap on/off, multiple columns, and item replacement are tested.
-- [ ] Repeated input uses the same movement method as pressed input.
-- [ ] No event fires for a true no-op selection.
+- [x] Empty, one item, all disabled, gaps, boundaries, wrap on/off, multiple columns, and item replacement are tested.
+- [x] Repeated input uses the same movement method as pressed input.
+- [x] No event fires for a true no-op selection.
 
 ### Verification
 
@@ -1069,11 +1072,11 @@ Render selection items and connect active/open window input to `SelectionControl
 
 ### Acceptance Criteria
 
-- [ ] Resize recomputes row rectangles and visuals.
-- [ ] Keyboard/gamepad actions drive controller exactly once.
-- [ ] Disabled confirm does not emit confirmation.
-- [ ] No game-specific command dispatch exists.
-- [ ] Labels and disabled-state visuals contain no Phaser `Text` object and use the configured loaded bitmap-font key.
+- [x] Resize recomputes row rectangles and visuals.
+- [x] Keyboard/gamepad actions drive controller exactly once.
+- [x] Disabled confirm does not emit confirmation.
+- [x] No game-specific command dispatch exists.
+- [x] Labels and disabled-state visuals contain no Phaser `Text` object and use the configured loaded bitmap-font key.
 
 ### Verification
 
@@ -1108,10 +1111,10 @@ Add themed cursor visuals and pointer hover/tap behavior without moving selectio
 
 ### Acceptance Criteria
 
-- [ ] Non-zero window position and resized content hit tests are covered.
-- [ ] Press-on-one/release-on-another does not confirm.
-- [ ] Hidden/inactive/closed windows ignore pointer input.
-- [ ] Cursor redraws on theme, selection, and layout changes only.
+- [x] Non-zero window position and resized content hit tests are covered.
+- [x] Press-on-one/release-on-another does not confirm.
+- [x] Hidden/inactive/closed windows ignore pointer input.
+- [x] Cursor redraws on theme, selection, and layout changes only.
 
 ### Verification
 
@@ -1147,10 +1150,10 @@ Expose `choose(items, options?)` as a Promise API over `SelectableWindow`.
 
 ### Acceptance Criteria
 
-- [ ] Keyboard, pointer/touch, gamepad, disabled rows, cancel disabled, busy, and destroy are tested.
-- [ ] Each call settles exactly once and releases temporary listeners.
-- [ ] Values preserve generic type through the result.
-- [ ] No MessageWindow or dialogue-engine dependency.
+- [x] Keyboard, pointer/touch, gamepad, disabled rows, cancel disabled, busy, and destroy are tested.
+- [x] Each call settles exactly once and releases temporary listeners.
+- [x] Values preserve generic type through the result.
+- [x] No MessageWindow or dialogue-engine dependency.
 
 ### Verification
 
@@ -1177,11 +1180,11 @@ Visually verify `SelectableWindow` and `ChoiceWindow` public behavior across inp
 
 ### Acceptance Criteria
 
-- [ ] Scene `preload()` loads the synced default font with `this.load.bitmapFont` before constructing `ChoiceWindow`.
-- [ ] Examples include strings, typed values, disabled items, cancel disabled, and multi-column movement.
-- [ ] Selected/cancelled result is printed to the on-screen event log.
-- [ ] Keyboard, pointer/touch, and available gamepad behavior match.
-- [ ] Repeated Scene restart creates no duplicated confirmation.
+- [x] Scene `preload()` loads the synced default font with `this.load.bitmapFont` before constructing `ChoiceWindow`.
+- [x] Examples include strings, typed values, disabled items, cancel disabled, and multi-column movement.
+- [x] Selected/cancelled result is printed to the on-screen event log.
+- [x] Keyboard, pointer/touch, and available gamepad behavior match.
+- [x] Repeated Scene restart creates no duplicated confirmation.
 
 ### Verification
 
@@ -1191,6 +1194,8 @@ bun run dev
 ```
 
 ## TASK-080 Integration and lifecycle hardening
+
+Status: **complete** (2026-08-29). Evidence: [PHASE1_CLOSEOUT_PLAN.md](PHASE1_CLOSEOUT_PLAN.md) TASK-080-R1/R2, [MVP_RELEASE_CHECKLIST.md](MVP_RELEASE_CHECKLIST.md).
 
 ### Goal
 
@@ -1216,10 +1221,10 @@ Run message then choice repeatedly in one scene and close gaps at the boundaries
 
 ### Acceptance Criteria
 
-- [ ] Exactly one window consumes confirm/cancel at a time.
-- [ ] Fifty scripted flow iterations settle without accumulating subscribers or Game Objects.
-- [ ] Scene restart during both message and choice settles pending work and next start behaves once.
-- [ ] All full-gate commands pass after the audit.
+- [x] Exactly one window consumes confirm/cancel at a time. Evidence: `tests/integration/exclusiveInput.settlement.test.ts`; shared input in `IntegrationScene.ts`.
+- [x] Fifty scripted flow iterations settle without accumulating subscribers or Game Objects. Evidence: `tests/integration/exclusiveInput.settlement.test.ts`.
+- [x] Scene restart during both message and choice settles pending work and next start behaves once. Chromium verified 2026-08-29 (`MVP_RELEASE_CHECKLIST.md`).
+- [x] All full-gate commands pass after the audit. Evidence: `bun run check` 2026-08-29.
 
 ### Verification
 
@@ -1231,6 +1236,8 @@ bun run dev
 Manual: run the complete integration flow and restart checks in Chromium.
 
 ## TASK-081 Public API, package, and MVP release gate
+
+Status: **complete** (2026-08-29). Evidence: [PHASE1_CLOSEOUT_PLAN.md](PHASE1_CLOSEOUT_PLAN.md) TASK-081-R1/R2/R3, [MVP_RELEASE_CHECKLIST.md](MVP_RELEASE_CHECKLIST.md).
 
 ### Goal
 
@@ -1259,12 +1266,12 @@ Make the implemented MVP consumable as a documented library and produce an evide
 
 ### Acceptance Criteria
 
-- [ ] A temporary consumer fixture can import built JS and declarations using only public exports.
-- [ ] README examples typecheck.
-- [ ] Production bundle does not contain a second bundled Phaser copy.
-- [ ] Consumer fixture loads an upstream-built font through Phaser's standard loader; no custom XML/JSON parser is exported or bundled.
-- [ ] Repository source scan finds no Phaser `Text` creation in `src/` or canvas examples.
-- [ ] Every Phase 1 acceptance criterion is checked or explicitly blocked with evidence.
+- [x] A temporary consumer fixture can import built JS and declarations using only public exports. Evidence: `tests/package/public-exports.test.ts`, `examples/consumer/readme-example.ts`.
+- [x] README examples typecheck. Evidence: `bun run typecheck:consumer`.
+- [x] Production bundle does not contain a second bundled Phaser copy. Evidence: `dist/index.js` 55.79 kB, external `from "phaser"`.
+- [x] Consumer fixture loads an upstream-built font through Phaser's standard loader; no custom XML/JSON parser is exported or bundled. Evidence: README/API docs; bundle scan in `tests/package/public-exports.test.ts`.
+- [x] Repository source scan finds no Phaser `Text` creation in `src/` or canvas examples. Evidence: `tests/package/public-exports.test.ts`.
+- [x] Every Phase 1 acceptance criterion is checked or explicitly blocked with evidence. Evidence: this file §10, [MVP_RELEASE_CHECKLIST.md](MVP_RELEASE_CHECKLIST.md).
 
 ### Verification
 
@@ -1276,21 +1283,11 @@ Also inspect `dist/` and typecheck the documented consumer example.
 
 ---
 
-## 8. Phase 2 backlog (not authorized by Phase 1 tasks)
+## 8. Phase 2
 
-Create new detailed tasks only after TASK-081:
+Detailed, authorized tasks live in [PHASE2_IMPLEMENTATION_PLAN.md](PHASE2_IMPLEMENTATION_PLAN.md). That plan expands the former backlog and requires a `WindowBase` isolation proof on every task.
 
-1. `ScrollController`: pure scroll bounds, target/current offset, wheel/drag/page actions.
-2. `ScrollableWindow`: composition with `WindowBase`, indicators and optional scrollbar.
-3. Selectable + scroll composition and virtualized long lists.
-4. NineSlice renderer and RPG-style skin adapter using user-owned assets.
-5. `HelpWindow`, `CommandWindow`, `LogWindow`, `DocumentWindow`.
-6. Focus/modal stack owned per Scene; z-order and input capture policy.
-7. Portraits, richer inline message tokens, auto mode, audio hooks.
-8. Responsive layout and accessibility hooks.
-9. Multiple bitmap-font keys, explicit application-supplied fallback chains, and font hot swapping. These remain opt-in and must never fall back to system fonts.
-
-Before any Phase 2 task, write acceptance criteria that prove it does not force derived-specific logic back into `WindowBase`.
+Do not implement Phase 2 items from memory against this list; execute TASK-100 onward from the Phase 2 document, one task at a time.
 
 ## 9. Risk register
 
@@ -1312,14 +1309,14 @@ Before any Phase 2 task, write acceptance criteria that prove it does not force 
 
 | Capability | Automated evidence | Browser evidence |
 |---|---|---|
-| Window geometry/theme/open-close | TASK-010/020/021/040 tests | WindowBaseScene |
-| Content clipping | ContentClipper structural tests | ClippingSpikeScene + ADR |
-| Scene lifecycle | WindowBase lifecycle tests | LifecycleScene restart |
-| Standard bitmap-font loading/provenance | Artifact validation/source scan | BitmapFontSpikeScene + ADR |
-| Keyboard/pointer/gamepad normalization | Input adapter tests | Message/Choice scenes |
-| Japanese layout/typewriter/pages | Text/parser/state/message tests | MessageScene |
-| Disabled selection/confirm/cancel | Selection/choice tests | ChoiceScene |
-| Async `say`/`choose` settlement | Controller/window tests | IntegrationScene |
-| Package surface | declaration consumer check | N/A |
+| Window geometry/theme/open-close | `tests/core/theme.test.ts`, `TransitionController.test.ts`, `GraphicsWindowRenderer.test.ts` | `?scene=window-base` (`WindowBaseScene.ts`) |
+| Content clipping | `tests/core/ContentClipper.contract.test.ts` | `?scene=clipping` + ADR 0001 |
+| Scene lifecycle | `tests/core/WindowBase.lifecycle.test.ts`, `tests/integration/pendingSettlement.test.ts` | `?scene=lifecycle`, `?scene=lifecycle&mode=restart-say`, `?scene=lifecycle&mode=restart-choose` |
+| Standard bitmap-font loading/provenance | `tests/scripts/sync-font-assets.test.ts`, source scan | `?scene=bitmap-font` + ADR 0002 |
+| Keyboard/pointer/gamepad normalization | `tests/input/ManualWindowInput.test.ts`, `tests/integration/exclusiveInput.settlement.test.ts` | `?scene=message`, `?scene=choice`; gamepad **blocked** (no hardware) |
+| Japanese layout/typewriter/pages | `tests/text/TextLayout.test.ts`, `tests/message/*.test.ts` | `?scene=message` |
+| Disabled selection/confirm/cancel | `tests/selection/SelectionController.test.ts` | `?scene=choice` |
+| Async `say`/`choose` settlement | `tests/integration/exclusiveInput.settlement.test.ts`, `pendingSettlement.test.ts` | `?scene=integration`, restart exercise URLs |
+| Package surface | `tests/package/public-exports.test.ts`, `typecheck:consumer` | N/A |
 
 MVP is not complete when only unit tests pass: every browser-evidence row must also be recorded in `docs/MVP_RELEASE_CHECKLIST.md`.

@@ -5,7 +5,7 @@ import type {
   TextLayoutOptions,
   TextLayoutResult,
 } from "./types.ts";
-import { MissingBitmapGlyphError } from "./types.ts";
+import { assertMeasurerHasGlyphs } from "./fontFallback.ts";
 
 const segmenter =
   typeof Intl !== "undefined" && "Segmenter" in Intl
@@ -21,33 +21,6 @@ function splitGraphemes(text: string): string[] {
 
 function normalizeNewlines(text: string): string {
   return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-}
-
-function isStructuralCodePoint(codePoint: number): boolean {
-  return codePoint === 0x000a || codePoint === 0x000c;
-}
-
-function preflight(text: string, measurer: BitmapTextMeasurer): void {
-  for (let index = 0; index < text.length; index += 1) {
-    const codePoint = text.codePointAt(index);
-    if (codePoint === undefined || isStructuralCodePoint(codePoint)) {
-      if (codePoint !== undefined && codePoint > 0xffff) {
-        index += 1;
-      }
-      continue;
-    }
-    if (!measurer.hasGlyph(codePoint)) {
-      throw new MissingBitmapGlyphError(
-        measurer.fontKey,
-        codePoint,
-        String.fromCodePoint(codePoint),
-        index,
-      );
-    }
-    if (codePoint > 0xffff) {
-      index += 1;
-    }
-  }
 }
 
 /**
@@ -67,7 +40,7 @@ export function layoutText(text: string, measurer: BitmapTextMeasurer, options: 
 
   const normalized = normalizeNewlines(text);
   for (const paragraph of normalized.split("\n")) {
-    preflight(paragraph, measurer);
+    assertMeasurerHasGlyphs(paragraph, measurer);
   }
 
   const lineHeight = measurer.lineHeight * options.style.scale + options.lineSpacing;

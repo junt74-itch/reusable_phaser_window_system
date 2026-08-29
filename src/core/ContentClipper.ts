@@ -28,6 +28,7 @@ export class ContentClipper {
 
   public attach(target: Phaser.GameObjects.Container): void {
     this.target = target;
+    this.target.setSize(this.bounds.width, this.bounds.height);
     this.ensureMaskGraphics();
     if (this.maskGraphics !== null && this.maskGraphics.parentContainer !== target) {
       target.add(this.maskGraphics);
@@ -39,6 +40,9 @@ export class ContentClipper {
 
   public updateBounds(bounds: WindowBounds): void {
     this.bounds = { ...bounds };
+    if (this.target !== null) {
+      this.target.setSize(bounds.width, bounds.height);
+    }
     this.redrawMask();
   }
 
@@ -100,19 +104,24 @@ export class ContentClipper {
     if (target.filters === null) {
       target.enableFilters();
     }
+    target.filtersAutoFocus = true;
+    target.filtersFocusContext = true;
     const filters = target.filters;
     if (filters === null) {
       throw new ContentClipperUnsupportedError("Failed to enable filters on content container.");
     }
     if (this.maskFilter !== null) {
-      filters.internal.remove(this.maskFilter, true);
+      filters.external.remove(this.maskFilter, true);
       this.maskFilter = null;
     }
-    this.maskFilter = filters.internal.addMask(
+    // Internal masks match the filtered object's view. Scrolled children expand
+    // that view, so the clip rect sticks to the overflow instead of the viewport.
+    // External + world keeps the hole at the content rectangle in camera space.
+    this.maskFilter = filters.external.addMask(
       this.maskGraphics,
       false,
       this.scene.cameras.main,
-      "local",
+      "world",
     );
   }
 
@@ -140,7 +149,7 @@ export class ContentClipper {
 
   private clearWebGLMask(target: Phaser.GameObjects.Container): void {
     if (this.maskFilter !== null && target.filters !== null) {
-      target.filters.internal.remove(this.maskFilter, true);
+      target.filters.external.remove(this.maskFilter, true);
       this.maskFilter = null;
     }
   }

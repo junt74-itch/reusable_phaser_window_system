@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { WindowBounds } from "../../src/core/types.ts";
 
 /** Mirrors ContentClipper.redrawMask local coordinates without importing Phaser. */
@@ -39,6 +41,17 @@ describe("ContentClipper contract", () => {
     expect(initial.height).toBe(80);
     expect(resized.width).toBe(240);
     expect(resized.height).toBe(100);
+  });
+
+  test("WebGL clip uses external world mask so overflow does not expand the hole", () => {
+    const source = readFileSync(
+      join(import.meta.dir, "../../src/core/ContentClipper.ts"),
+      "utf8",
+    );
+    expect(source.includes("filters.external.addMask")).toBe(true);
+    expect(source.includes("filtersFocusContext = true")).toBe(true);
+    expect(source.includes('"world"')).toBe(true);
+    expect(source.includes("setSize(bounds.width, bounds.height)")).toBe(true);
   });
 
   test("mask graphics are parented to the clipped content container", () => {

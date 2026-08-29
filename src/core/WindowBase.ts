@@ -1,8 +1,8 @@
 import Phaser from "phaser";
 import { ContentClipper } from "./ContentClipper.ts";
-import { GraphicsWindowRenderer } from "./GraphicsWindowRenderer.ts";
-import { createPhaserGraphicsFactory } from "./PhaserGraphicsFactory.ts";
-import { TransitionController } from "./TransitionController.ts";
+import { TransitionController, type TransitionState, type TransitionSubscription } from "./TransitionController.ts";
+import type { WindowRenderer, WindowRendererFactory } from "./WindowRenderer.ts";
+import { resolveWindowRenderer } from "./windowRendererFactory.ts";
 import { computeContentBounds, resolveWindowTheme, validateWindowConfig } from "./theme.ts";
 import type {
   WindowBounds,
@@ -23,6 +23,7 @@ import type { WindowInputAdapter } from "../input/WindowInputAdapter.ts";
 export interface WindowBaseOptions {
   readonly input?: WindowInputAdapter;
   readonly ownsInput?: boolean;
+  readonly createRenderer?: WindowRendererFactory;
 }
 
 /**
@@ -32,7 +33,7 @@ export class WindowBase {
   protected readonly scene: Phaser.Scene;
   protected readonly root: Phaser.GameObjects.Container;
   protected readonly content: Phaser.GameObjects.Container;
-  protected readonly renderer: GraphicsWindowRenderer;
+  protected readonly renderer: WindowRenderer;
   protected readonly clipper: ContentClipper;
   protected readonly transition: TransitionController;
   protected theme: ResolvedWindowTheme;
@@ -65,7 +66,10 @@ export class WindowBase {
     this.rootY = Math.trunc(config.y);
     this.root = scene.add.container(this.rootX, this.rootY);
     this.content = scene.add.container(this.contentBounds.x, this.contentBounds.y);
-    this.renderer = new GraphicsWindowRenderer(createPhaserGraphicsFactory(scene, this.root));
+    this.renderer = resolveWindowRenderer(options.createRenderer, {
+      scene: this.scene,
+      root: this.root,
+    });
     this.clipper = new ContentClipper(scene);
     this.transition = new TransitionController(this.theme.transitionDurationMs);
 
@@ -108,6 +112,10 @@ export class WindowBase {
 
   public isEnabled(): boolean {
     return this.enabled;
+  }
+
+  public isDestroyed(): boolean {
+    return this.destroyed;
   }
 
   public getAlpha(): number {
@@ -240,6 +248,11 @@ export class WindowBase {
   public close(durationMs?: number): Promise<void> {
     this.assertAlive();
     return this.transition.close(durationMs);
+  }
+
+  public subscribeTransition(listener: (state: TransitionState) => void): TransitionSubscription {
+    this.assertAlive();
+    return this.transition.subscribe(listener);
   }
 
   public update(_time: number, delta: number): void {

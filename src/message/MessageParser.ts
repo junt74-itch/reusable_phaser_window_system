@@ -1,7 +1,9 @@
 import type { MessageParseResult, MessageToken } from "./types.ts";
 
 const WAIT_PATTERN = /^\{wait:(\d+)\}$/;
-const DIRECTIVE_PATTERN = /\{([^}]+)\}/;
+const COLOR_PATTERN = /^\{color:([0-9A-Fa-f]{6})\}$/;
+const COLOR_RESET_PATTERN = /^\{color\}$/;
+const SPEED_PATTERN = /^\{speed:(\d+)\}$/;
 
 /**
  * Parses MVP message syntax into immutable tokens.
@@ -77,13 +79,44 @@ export function parseMessage(text: string): MessageParseResult {
         }
       } else if (inner === "pause") {
         tokens.push({ type: "pause", start: directiveStart, end: directiveEnd });
+      } else if (COLOR_RESET_PATTERN.test(raw)) {
+        tokens.push({ type: "color", color: null, start: directiveStart, end: directiveEnd });
       } else {
-        tokens.push({
-          type: "text",
-          value: raw,
-          start: directiveStart,
-          end: directiveEnd,
-        });
+        const colorMatch = COLOR_PATTERN.exec(raw);
+        const speedMatch = SPEED_PATTERN.exec(raw);
+        if (colorMatch !== null) {
+          const hex = colorMatch[1];
+          tokens.push({
+            type: "color",
+            color: Number.parseInt(hex ?? "0", 16),
+            start: directiveStart,
+            end: directiveEnd,
+          });
+        } else if (speedMatch !== null) {
+          const charsPerSecond = Number(speedMatch[1]);
+          if (Number.isInteger(charsPerSecond) && charsPerSecond >= 1 && charsPerSecond <= 1_200) {
+            tokens.push({
+              type: "speed",
+              charsPerSecond,
+              start: directiveStart,
+              end: directiveEnd,
+            });
+          } else {
+            tokens.push({
+              type: "text",
+              value: raw,
+              start: directiveStart,
+              end: directiveEnd,
+            });
+          }
+        } else {
+          tokens.push({
+            type: "text",
+            value: raw,
+            start: directiveStart,
+            end: directiveEnd,
+          });
+        }
       }
       index = end + 1;
       continue;

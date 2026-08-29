@@ -69,8 +69,13 @@ export function reduceTextState(
     state = skipToNextAdvancePoint(tokens, state, layoutPageBreaksByPage);
   }
 
-  if (input.advance === true && state.pausedForAdvance) {
-    state = advanceAfterPause(tokens, state, effects, layoutPageBreaksByPage);
+  if (input.advance === true) {
+    if (!state.pausedForAdvance && requiresAdvanceInput(tokens, state, layoutPageBreaksByPage)) {
+      state = { ...state, pausedForAdvance: true };
+    }
+    if (state.pausedForAdvance) {
+      state = advanceAfterPause(tokens, state, effects, layoutPageBreaksByPage);
+    }
   }
 
   const deltaMs = input.deltaMs ?? 0;
@@ -84,6 +89,21 @@ export function reduceTextState(
   }
 
   return { state, effects };
+}
+
+function resolveCharsPerSecond(
+  tokens: readonly MessageToken[],
+  tokenIndex: number,
+  fallback: number,
+): number {
+  let speed = fallback;
+  for (let index = 0; index < tokenIndex; index += 1) {
+    const token = tokens[index];
+    if (token?.type === "speed") {
+      speed = token.charsPerSecond;
+    }
+  }
+  return speed;
 }
 
 function getLayoutBreaksForPage(
@@ -125,6 +145,11 @@ function progressTimed(
       continue;
     }
 
+    if (token.type === "color" || token.type === "speed") {
+      current = { ...current, tokenIndex: current.tokenIndex + 1, graphemeOffset: 0 };
+      continue;
+    }
+
     if (token.type === "newline") {
       current = {
         ...current,
@@ -146,7 +171,7 @@ function progressTimed(
         current = { ...current, tokenIndex: current.tokenIndex + 1, graphemeOffset: 0 };
         continue;
       }
-      const msPerChar = 1000 / charsPerSecond;
+      const msPerChar = 1000 / resolveCharsPerSecond(tokens, current.tokenIndex, charsPerSecond);
       current = {
         ...current,
         revealAccumulator: current.revealAccumulator + remainingDelta,
@@ -243,6 +268,10 @@ function skipToNextAdvancePoint(
     }
     if (token.type === "wait") {
       current = { ...current, tokenIndex: current.tokenIndex + 1, waitRemainingMs: 0 };
+      continue;
+    }
+    if (token.type === "color" || token.type === "speed") {
+      current = { ...current, tokenIndex: current.tokenIndex + 1, graphemeOffset: 0 };
       continue;
     }
     if (token.type === "newline") {
@@ -376,9 +405,44 @@ export function getRevealedText(tokens: readonly MessageToken[], state: TextStat
   return output;
 }
 
-function getRevealedTextInExplicitPage(tokens: readonly MessageToken[], state: TextState): string {
-  let output = "";
+export function getRevealedPageText(
+  tokens: readonly MessageToken[],
+  state: TextState,
+  layoutPageBreaksByPage: readonly (readonly number[])[] = [],
+): string {
+  return getRevealedPageGlyphs(tokens, state, layoutPageBreaksByPage)
+    .map((glyph) => glyph.char)
+    .join("");
+}
+
+export function getRevealedPageColors(
+  tokens: readonly MessageToken[],
+  state: TextState,
+  layoutPageBreaksByPage: readonly (readonly number[])[] = [],
+): readonly (number | null)[] {
+  return getRevealedPageGlyphs(tokens, state, layoutPageBreaksByPage).map((glyph) => glyph.color);
+}
+
+function getRevealedPageGlyphs(
+  tokens: readonly MessageToken[],
+  state: TextState,
+  layoutPageBreaksByPage: readonly (readonly number[])[],
+): readonly { char: string; color: number | null }[] {
+  const glyphs = getRevealedGlyphsInExplicitPage(tokens, state);
+  const layoutPageBreaks = getLayoutBreaksForPage(layoutPageBreaksByPage, state.pageIndex);
+  const start =
+    state.layoutPageIndex === 0 ? 0 : (layoutPageBreaks[state.layoutPageIndex - 1] ?? glyphs.length);
+  const end = layoutPageBreaks[state.layoutPageIndex] ?? glyphs.length;
+  return glyphs.slice(start, Math.min(glyphs.length, end));
+}
+
+function getRevealedGlyphsInExplicitPage(
+  tokens: readonly MessageToken[],
+  state: TextState,
+): { char: string; color: number | null }[] {
+  const glyphs: { char: string; color: number | null }[] = [];
   let page = 0;
+  let color: number | null = null;
   for (let index = 0; index < tokens.length; index += 1) {
     if (index > state.tokenIndex) {
       break;
@@ -391,35 +455,29 @@ function getRevealedTextInExplicitPage(tokens: readonly MessageToken[], state: T
       page += 1;
       continue;
     }
+    if (token.type === "color") {
+      if (index < state.tokenIndex) {
+        color = token.color;
+      }
+      continue;
+    }
+    if (token.type === "speed" || token.type === "wait" || token.type === "pause") {
+      continue;
+    }
     if (page !== state.pageIndex) {
       continue;
     }
     if (token.type === "text") {
-      if (index < state.tokenIndex) {
-        output += token.value;
-      } else {
-        output += token.value.slice(0, state.graphemeOffset);
+      const value =
+        index < state.tokenIndex ? token.value : token.value.slice(0, state.graphemeOffset);
+      for (const char of value) {
+        glyphs.push({ char, color });
       }
     } else if (token.type === "newline" && index < state.tokenIndex) {
-      output += "\n";
+      glyphs.push({ char: "\n", color });
     }
   }
-  return output;
-}
-
-export function getRevealedPageText(
-  tokens: readonly MessageToken[],
-  state: TextState,
-  layoutPageBreaksByPage: readonly (readonly number[])[] = [],
-): string {
-  const revealedInPage = getRevealedTextInExplicitPage(tokens, state);
-  const layoutPageBreaks = getLayoutBreaksForPage(layoutPageBreaksByPage, state.pageIndex);
-  const start =
-    state.layoutPageIndex === 0
-      ? 0
-      : (layoutPageBreaks[state.layoutPageIndex - 1] ?? revealedInPage.length);
-  const end = layoutPageBreaks[state.layoutPageIndex] ?? revealedInPage.length;
-  return revealedInPage.slice(start, Math.min(revealedInPage.length, end));
+  return glyphs;
 }
 
 export function requiresAdvanceInput(

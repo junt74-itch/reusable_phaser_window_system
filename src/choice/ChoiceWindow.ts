@@ -102,6 +102,10 @@ export class ChoiceWindow<T = string> extends SelectableWindow<T> {
     this.settleOnce({ status: "cancelled" });
   }
 
+  protected override isTextOperationBusy(): boolean {
+    return this.pending;
+  }
+
   public override destroy(): void {
     this.settleOnce(new WindowOperationCancelledError("destroyed"));
     super.destroy();

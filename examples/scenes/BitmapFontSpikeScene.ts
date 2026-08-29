@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { preloadDefaultBitmapFont } from "../preloadDefaultBitmapFont.ts";
 import { DEFAULT_BITMAP_FONT_ASSET } from "../../src/text/BitmapFontAsset.ts";
 
 export class BitmapFontSpikeScene extends Phaser.Scene {
@@ -7,11 +8,7 @@ export class BitmapFontSpikeScene extends Phaser.Scene {
   }
 
   public preload(): void {
-    this.load.bitmapFont(
-      DEFAULT_BITMAP_FONT_ASSET.key,
-      DEFAULT_BITMAP_FONT_ASSET.textureURL,
-      DEFAULT_BITMAP_FONT_ASSET.fontDataURL,
-    );
+    preloadDefaultBitmapFont(this);
   }
 
   public create(): void {

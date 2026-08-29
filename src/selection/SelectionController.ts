@@ -20,9 +20,15 @@ export class SelectionController<T> {
   private readonly confirmListeners = new Set<SelectionConfirmListener<T>>();
   private readonly cancelListeners = new Set<SelectionCancelListener>();
 
+  private readonly confirmHook: (() => void) | null;
+  private readonly cancelHook: (() => void) | null;
+  private closed = false;
+
   public constructor(options: SelectionControllerOptions = {}) {
     this.columns = Math.max(1, options.columns ?? 1);
     this.wrap = options.wrap ?? true;
+    this.confirmHook = options.onConfirm ?? null;
+    this.cancelHook = options.onCancel ?? null;
   }
 
   public setItems(items: readonly SelectableItem<T>[]): void {
@@ -85,6 +91,9 @@ export class SelectionController<T> {
   }
 
   public confirm(): boolean {
+    if (this.closed) {
+      return false;
+    }
     const item = this.getSelectedItem();
     if (item === null || !item.enabled) {
       return false;
@@ -92,13 +101,25 @@ export class SelectionController<T> {
     for (const listener of this.confirmListeners) {
       listener(this.selectedIndex, item);
     }
+    this.confirmHook?.();
     return true;
   }
 
   public cancel(): void {
+    if (this.closed) {
+      return;
+    }
     for (const listener of this.cancelListeners) {
       listener();
     }
+    this.cancelHook?.();
+  }
+
+  public dispose(): void {
+    this.closed = true;
+    this.confirmListeners.clear();
+    this.cancelListeners.clear();
+    this.changeListeners.clear();
   }
 
   public onChange(listener: SelectionChangeListener<T>): SelectionSubscription {

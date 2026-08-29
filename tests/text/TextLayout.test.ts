@@ -11,12 +11,15 @@ const style: BitmapTextMeasureStyle = {
 };
 
 class FakeMeasurer implements BitmapTextMeasurer {
-  public readonly fontKey = "test";
+  public readonly fontKey: string;
+  public readonly fontKeys: readonly string[];
   public readonly nativeFontSize = 12;
   public readonly lineHeight = 14;
   private readonly supported = new Set<number>();
 
-  public constructor(chars: string) {
+  public constructor(chars: string, fontKey = "test") {
+    this.fontKey = fontKey;
+    this.fontKeys = [fontKey];
     for (const char of chars) {
       const codePoint = char.codePointAt(0);
       if (codePoint !== undefined) {
@@ -27,6 +30,10 @@ class FakeMeasurer implements BitmapTextMeasurer {
 
   public hasGlyph(codePoint: number): boolean {
     return this.supported.has(codePoint);
+  }
+
+  public fontKeyFor(_codePoint: number): string {
+    return this.fontKey;
   }
 
   public measure(text: string, measureStyle: BitmapTextMeasureStyle): { width: number; height: number } {
@@ -53,9 +60,16 @@ describe("layoutText", () => {
     expect(() => layoutText("a😀", measurer, { width: 20, height: 40, style, lineSpacing: 0 })).toThrow(
       MissingBitmapGlyphError,
     );
-    expect(() => layoutText("•", measurer, { width: 20, height: 40, style, lineSpacing: 0 })).toThrow(
-      MissingBitmapGlyphError,
-    );
+    try {
+      layoutText("•", measurer, { width: 20, height: 40, style, lineSpacing: 0 });
+      throw new Error("expected MissingBitmapGlyphError");
+    } catch (error) {
+      expect(error).toBeInstanceOf(MissingBitmapGlyphError);
+      if (error instanceof MissingBitmapGlyphError) {
+        expect(error.triedKeys).toEqual(["test"]);
+        expect(error.fontKey).toBe("test");
+      }
+    }
   });
 
   test("allows explicit newline without a newline glyph", () => {

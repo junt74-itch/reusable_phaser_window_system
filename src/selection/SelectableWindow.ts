@@ -1,7 +1,19 @@
 import Phaser from "phaser";
+import type { WindowInputPhase } from "../input/types.ts";
 import type { WindowConfig } from "../core/types.ts";
 import type { WindowBaseOptions } from "../core/WindowBase.ts";
 import { TextWindowBase } from "../text/TextWindowBase.ts";
+import { assertMeasurerHasGlyphs, resolveLabelFontRuns } from "../text/fontFallback.ts";
+import { ScrollController } from "../scroll/ScrollController.ts";
+import { ScrollContentClip } from "../scroll/ScrollContentClip.ts";
+import { ScrollbarRenderer } from "../scroll/ScrollbarRenderer.ts";
+import { bindScrollInput, createScrollbarContentDragGate } from "../scroll/scrollInputBinding.ts";
+import { isPointInContentViewport } from "../scroll/scrollChrome.ts";
+import {
+  computeScrollOffsetToReveal,
+  computeVisibleRowRange,
+  hitTestRowAtContentLocal,
+} from "../scroll/scrollVisibility.ts";
 import { CursorRenderer } from "./CursorRenderer.ts";
 import { SelectionController } from "./SelectionController.ts";
 import type { SelectableItem, SelectionControllerOptions } from "./types.ts";
@@ -10,6 +22,8 @@ export interface SelectableWindowOptions extends WindowBaseOptions, SelectionCon
   readonly rowHeight?: number;
   readonly columnGap?: number;
   readonly rowGap?: number;
+  readonly showScrollbar?: boolean;
+  readonly rowOverscanPx?: number;
 }
 
 export interface RowBounds {
@@ -20,21 +34,32 @@ export interface RowBounds {
   readonly height: number;
 }
 
+const DEFAULT_ROW_OVERSCAN_PX = 24;
+
 /**
  * Renders selectable rows and connects semantic input to {@link SelectionController}.
  */
 export abstract class SelectableWindow<T> extends TextWindowBase {
   protected readonly controller: SelectionController<T>;
+  protected readonly scrollController: ScrollController;
+  protected readonly scrollBody: Phaser.GameObjects.Container;
+  private readonly scrollClip: ScrollContentClip;
   private readonly rowLabels: Phaser.GameObjects.BitmapText[] = [];
   private readonly cursor: CursorRenderer;
   private readonly rowHeight: number;
   private readonly columnGap: number;
   private readonly rowGap: number;
   private readonly columns: number;
+  private readonly rowOverscanPx: number;
+  private readonly showScrollbar: boolean;
   private items: readonly SelectableItem<T>[] = [];
   private rowBounds: RowBounds[] = [];
   private pointerDownIndex: number | null = null;
   private subscriptions: Array<{ unsubscribe: () => void }> = [];
+  private scrollInputBinding: { unsubscribe: () => void } | null = null;
+  private scrollSubscription: { unsubscribe: () => void } | null = null;
+  private scrollbar: ScrollbarRenderer | null = null;
+  private scrollEnabled = false;
 
   public constructor(
     scene: Phaser.Scene,
@@ -43,21 +68,57 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
   ) {
     super(scene, config, options);
     this.controller = new SelectionController<T>(options);
+    this.scrollController = new ScrollController();
     this.columns = Math.max(1, options.columns ?? 1);
     this.rowHeight = options.rowHeight ?? this.theme.text.fontSize * this.theme.text.scale + 8;
     this.columnGap = options.columnGap ?? 8;
     this.rowGap = options.rowGap ?? 4;
-    this.cursor = new CursorRenderer(scene, this.content);
+    this.rowOverscanPx = options.rowOverscanPx ?? DEFAULT_ROW_OVERSCAN_PX;
+    this.showScrollbar = options.showScrollbar ?? false;
+    this.scrollClip = new ScrollContentClip(scene, this.getContentContainer());
+    this.scrollBody = scene.add.container(0, 0);
+    this.scrollClip.getViewport().add(this.scrollBody);
+    const initialContent = this.getContentBounds();
+    this.scrollClip.updateBounds(initialContent.width, initialContent.height);
+    this.cursor = new CursorRenderer(scene, this.scrollBody);
     this.bindControllerEvents();
     this.bindInput();
+    this.scrollSubscription = this.scrollController.subscribe(() => {
+      this.applyScrollOffset();
+      this.refreshRowVisuals();
+      this.refreshCursor();
+      this.scrollbar?.update();
+      this.cullScrollBody();
+    });
+    if (this.showScrollbar) {
+      this.scrollbar = new ScrollbarRenderer(
+        scene,
+        this.getContentContainer(),
+        this.scrollController,
+        {
+          getContentWidth: () => this.getContentBounds().width,
+          getContentHeight: () => this.getContentBounds().height,
+        },
+      );
+      const input = this.getInputAdapter();
+      if (input !== null) {
+        this.scrollbar.bindPointer(input, {
+          canConsumeInput: () => this.canConsumeInput(),
+          toContentLocal: (worldX, worldY) => this.worldToContentLocal(worldX, worldY),
+        });
+      }
+    }
+    this.bindScrollInput();
   }
 
   public setItems(items: readonly SelectableItem<T>[]): void {
     this.items = items;
     this.controller.setItems(items);
     this.relayoutRows();
+    this.ensureSelectedVisible();
     this.refreshRowVisuals();
     this.refreshCursor();
+    this.scrollbar?.update();
   }
 
   public getItems(): readonly SelectableItem<T>[] {
@@ -66,6 +127,7 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
 
   public select(index: number): void {
     if (this.controller.selectIndex(index)) {
+      this.ensureSelectedVisible();
       this.refreshCursor();
     }
   }
@@ -78,6 +140,12 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
     return this.controller.getSelectedItem();
   }
 
+  public subscribeSelection(
+    listener: (index: number, item: SelectableItem<T> | null) => void,
+  ): { unsubscribe(): void } {
+    return this.controller.onChange(listener);
+  }
+
   protected getRowBounds(): readonly RowBounds[] {
     return this.rowBounds;
   }
@@ -88,6 +156,7 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
 
   public override update(time: number, delta: number): void {
     super.update(time, delta);
+    this.cursor.update(delta);
   }
 
   public override destroy(): void {
@@ -95,23 +164,37 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
       subscription.unsubscribe();
     }
     this.subscriptions = [];
+    this.scrollSubscription?.unsubscribe();
+    this.scrollSubscription = null;
+    this.scrollInputBinding?.unsubscribe();
+    this.scrollInputBinding = null;
+    this.scrollbar?.destroy();
+    this.scrollbar = null;
+    this.scrollClip.destroy();
     for (const label of this.rowLabels) {
       label.destroy();
     }
     this.rowLabels.length = 0;
     this.cursor.destroy();
+    this.controller.dispose();
     super.destroy();
   }
 
   protected override onLayoutChanged(): void {
+    super.onLayoutChanged(this.getContentBounds());
+    const content = this.getContentBounds();
+    this.scrollClip.updateBounds(content.width, content.height);
     this.relayoutRows();
+    this.ensureSelectedVisible();
     this.refreshRowVisuals();
     this.refreshCursor();
+    this.scrollbar?.update();
   }
 
   private bindControllerEvents(): void {
     this.subscriptions.push(
       this.controller.onChange(() => {
+        this.ensureSelectedVisible();
         this.refreshRowVisuals();
         this.refreshCursor();
       }),
@@ -154,21 +237,54 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
     );
   }
 
+  private bindScrollInput(): void {
+    const input = this.getInputAdapter();
+    if (input === null) {
+      return;
+    }
+    this.scrollInputBinding = bindScrollInput(input, this.scrollController, {
+      canConsumeInput: () => this.canConsumeInput(),
+      allowContentDrag: createScrollbarContentDragGate(this.scrollbar, (worldX, worldY) =>
+        this.worldToContentLocal(worldX, worldY),
+      ),
+    });
+  }
+
+  private isPointerInInteractiveContent(localX: number, localY: number): boolean {
+    if (this.scrollbar?.isPointerCaptured() === true) {
+      return false;
+    }
+    const content = this.getContentBounds();
+    return isPointInContentViewport(
+      localX,
+      localY,
+      content.width,
+      content.height,
+      this.scrollbar?.getTrackRect() ?? null,
+    );
+  }
+
   private handlePointer(
     localX: number,
     localY: number,
-    phase: string,
+    phase: WindowInputPhase,
     isPrimaryDown: boolean,
   ): void {
     if (!this.canConsumeInput()) {
       return;
     }
+    if (!this.isPointerInInteractiveContent(localX, localY)) {
+      if (phase === "released") {
+        this.pointerDownIndex = null;
+      }
+      return;
+    }
     const index = this.hitTestRow(localX, localY);
+    if (index !== null && (phase === "pressed" || phase === "repeated")) {
+      this.select(index);
+    }
     if (phase === "pressed" && isPrimaryDown) {
       this.pointerDownIndex = index;
-      if (index !== null) {
-        this.select(index);
-      }
       return;
     }
     if (phase === "released") {
@@ -199,38 +315,69 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
       };
     });
     const last = this.rowBounds[this.rowBounds.length - 1];
-    const requiredHeight = last === undefined ? 0 : last.y + this.rowHeight;
-    if (requiredHeight > content.height) {
-      throw new Error("Selectable rows exceed content height in Phase 1.");
+    const requiredHeight = last === undefined ? 0 : last.y + last.height;
+    this.scrollEnabled = requiredHeight > content.height;
+    this.scrollController.setViewportSize(content.height);
+    this.scrollController.setContentSize(requiredHeight);
+    if (!this.scrollEnabled) {
+      this.scrollController.setOffset(0);
     }
+    this.applyScrollOffset();
   }
 
   private refreshRowVisuals(): void {
-    while (this.rowLabels.length < this.items.length) {
-      const label = this.scene.add.bitmapText(
-        0,
-        0,
-        this.theme.text.fontKey,
-        "",
-        this.theme.text.fontSize,
-      );
-      label.setScale(this.theme.text.scale);
-      this.content.add(label);
-      this.rowLabels.push(label);
+    for (const item of this.items) {
+      assertMeasurerHasGlyphs(item.label, this.measurer);
     }
-    for (let index = 0; index < this.rowLabels.length; index += 1) {
-      const label = this.rowLabels[index];
+    const visibleRange = this.getVisibleRowRange();
+    const style = this.theme.text;
+    let slot = 0;
+    for (let index = visibleRange.start; index <= visibleRange.end; index += 1) {
       const item = this.items[index];
       const bounds = this.rowBounds[index];
-      if (label === undefined || item === undefined || bounds === undefined) {
-        label?.setVisible(false);
+      if (item === undefined || bounds === undefined) {
         continue;
       }
-      label.setText(item.label);
-      label.setPosition(Math.trunc(bounds.x), Math.trunc(bounds.y + 4));
-      label.setTint(item.enabled ? this.theme.text.tint : 0x888888);
-      label.setAlpha(item.enabled ? 1 : 0.5);
-      label.setVisible(true);
+      const runs = resolveLabelFontRuns(item.label, this.measurer);
+      let x = bounds.x;
+      for (const run of runs) {
+        this.ensureRowLabelCount(slot + 1);
+        const label = this.rowLabels[slot];
+        if (label === undefined) {
+          continue;
+        }
+        label.setFont(run.fontKey);
+        label.setText(run.text);
+        label.setFontSize(style.fontSize);
+        label.setScale(style.scale);
+        label.setLetterSpacing(style.letterSpacing);
+        label.setPosition(Math.trunc(x), Math.trunc(bounds.y + 4));
+        label.setTint(item.enabled ? style.tint : 0x888888);
+        label.setAlpha(item.enabled ? 1 : 0.5);
+        label.setVisible(true);
+        if (run.text.length > 0) {
+          x += this.measurer.measure(run.text, {
+            fontKey: run.fontKey,
+            fontSize: style.fontSize,
+            scale: style.scale,
+            letterSpacing: style.letterSpacing,
+          }).width;
+        }
+        slot += 1;
+      }
+    }
+    for (let index = slot; index < this.rowLabels.length; index += 1) {
+      this.rowLabels[index]?.setVisible(false);
+    }
+  }
+
+  private ensureRowLabelCount(count: number): void {
+    const style = this.theme.text;
+    while (this.rowLabels.length < count) {
+      const label = this.scene.add.bitmapText(0, 0, style.fontKey, "", style.fontSize);
+      label.setScale(style.scale);
+      this.scrollBody.add(label);
+      this.rowLabels.push(label);
     }
   }
 
@@ -248,16 +395,63 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
   }
 
   private hitTestRow(localX: number, localY: number): number | null {
-    for (const bounds of this.rowBounds) {
-      if (
-        localX >= bounds.x &&
-        localX <= bounds.x + bounds.width &&
-        localY >= bounds.y &&
-        localY <= bounds.y + bounds.height
-      ) {
-        return bounds.index;
-      }
+    const content = this.getContentBounds();
+    const offset = this.scrollEnabled ? this.scrollController.getBounds().offset : 0;
+    return hitTestRowAtContentLocal(
+      localX,
+      localY,
+      offset,
+      content.width,
+      content.height,
+      this.scrollbar?.getTrackRect() ?? null,
+      this.rowBounds,
+    );
+  }
+
+  private getVisibleRowRange(): { start: number; end: number } {
+    const offset = this.scrollEnabled ? this.scrollController.getBounds().offset : 0;
+    return computeVisibleRowRange(
+      this.rowBounds.map((row) => row.y),
+      this.rowBounds.map((row) => row.height),
+      offset,
+      this.getContentBounds().height,
+      this.rowOverscanPx,
+    );
+  }
+
+  private ensureSelectedVisible(): void {
+    if (!this.scrollEnabled) {
+      return;
     }
-    return null;
+    const index = this.controller.getSelectedIndex();
+    const bounds = index >= 0 ? this.rowBounds[index] : undefined;
+    if (bounds === undefined) {
+      return;
+    }
+    const viewport = this.getContentBounds().height;
+    const currentOffset = this.scrollController.getBounds().offset;
+    const nextOffset = computeScrollOffsetToReveal(
+      bounds.y,
+      bounds.y + bounds.height,
+      viewport,
+      currentOffset,
+    );
+    if (nextOffset !== null) {
+      this.scrollController.setOffset(nextOffset);
+    }
+  }
+
+  private applyScrollOffset(): void {
+    const offset = this.scrollController.getBounds().offset;
+    this.scrollBody.setPosition(0, this.scrollEnabled ? -offset : 0);
+    this.cullScrollBody();
+  }
+
+  private cullScrollBody(): void {
+    this.scrollClip.cullChildren(
+      this.scrollBody,
+      this.scrollEnabled ? this.scrollController.getBounds().offset : 0,
+      "y",
+    );
   }
 }

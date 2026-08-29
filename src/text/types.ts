@@ -1,16 +1,20 @@
 /** Thrown when a code point is absent from the configured bitmap font. */
 export class MissingBitmapGlyphError extends Error {
   public override readonly name = "MissingBitmapGlyphError";
+  public readonly triedKeys: readonly string[];
 
   public constructor(
     public readonly fontKey: string,
     public readonly codePoint: number,
     public readonly character: string,
     public readonly sourceIndex: number,
+    triedKeys: readonly string[] = [fontKey],
   ) {
+    const keys = triedKeys.length > 0 ? triedKeys : [fontKey];
     super(
-      `Missing glyph U+${codePoint.toString(16).toUpperCase().padStart(4, "0")} (${character}) at index ${sourceIndex} for font "${fontKey}".`,
+      `Missing glyph U+${codePoint.toString(16).toUpperCase().padStart(4, "0")} (${character}) at index ${sourceIndex} for font "${fontKey}". Tried keys: ${keys.join(", ")}.`,
     );
+    this.triedKeys = keys;
   }
 }
 
@@ -22,6 +26,15 @@ export class BitmapFontNotLoadedError extends Error {
     super(
       `Bitmap font "${fontKey}" is not loaded. Call scene.load.bitmapFont("${fontKey}", textureURL, fontDataURL) in preload().`,
     );
+  }
+}
+
+/** Thrown when `setFontKey` is called while a window operation is in flight. */
+export class FontSwapBusyError extends Error {
+  public override readonly name = "FontSwapBusyError";
+
+  public constructor() {
+    super("Cannot change font while a window operation is in progress.");
   }
 }
 
@@ -40,10 +53,16 @@ export interface BitmapTextMeasurement {
 /** Phaser-free measurement surface for layout. */
 export interface BitmapTextMeasurer {
   readonly fontKey: string;
+  readonly fontKeys: readonly string[];
   readonly nativeFontSize: number;
   readonly lineHeight: number;
   hasGlyph(codePoint: number): boolean;
+  fontKeyFor(codePoint: number): string;
   measure(text: string, style: BitmapTextMeasureStyle): BitmapTextMeasurement;
+}
+
+export interface OwnedBitmapTextMeasurer extends BitmapTextMeasurer {
+  destroy(): void;
 }
 
 export interface TextLineRange {

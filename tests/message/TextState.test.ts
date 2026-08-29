@@ -106,4 +106,19 @@ describe("TextState", () => {
     expect(getRevealedPageText(longTokens, state, layoutPageBreaksByPage)).toBe("ABCDEFGHIJ");
     expect(state.pausedForAdvance).toBe(true);
   });
+
+  test("color tokens do not appear in revealed text and speed changes typing rate", () => {
+    const colored: MessageToken[] = [
+      { type: "color", color: 0xff0000, start: 0, end: 14 },
+      { type: "text", value: "AB", start: 14, end: 16 },
+      { type: "speed", charsPerSecond: 1, start: 16, end: 25 },
+      { type: "text", value: "CD", start: 25, end: 27 },
+    ];
+    let state = createInitialTextState();
+    state = reduceTextState(colored, state, { deltaMs: 50 }, 120).state;
+    expect(getRevealedPageText(colored, state)).toBe("AB");
+    const slow = reduceTextState(colored, state, { deltaMs: 50 }, 120).state;
+    expect(getRevealedPageText(colored, slow).startsWith("AB")).toBe(true);
+    expect(getRevealedPageText(colored, slow).length).toBeLessThan(4);
+  });
 });

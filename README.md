@@ -1,8 +1,8 @@
 # Reusable Phaser 4 Window System
 
-Phaser 4 向けの再利用可能なゲームウィンドウライブラリです。メッセージ表示 (`MessageWindow.say`) と選択肢 (`ChoiceWindow.choose`) を提供します。
+Phaser 4 向けの再利用可能なゲームウィンドウライブラリです。メッセージ (`MessageWindow.say`)、選択肢 (`ChoiceWindow.choose`)、コマンド / ヘルプ / ログ / ドキュメント、スクロール、NineSlice chrome、Scene 所有の focus/modal を提供します。
 
-## セットアップ
+## インストールと sandbox
 
 ```bash
 bun install
@@ -11,22 +11,153 @@ bun run check
 bun run dev
 ```
 
-ブラウザ sandbox は `http://localhost:5173/?scene=integration` で起動します。利用可能な scene: `integration`, `message`, `choice`, `window-base`, `lifecycle`, `clipping`, `bitmap-font`.
+`font:sync` は upstream の `dist/jf-dot-mplus12` から `font.png` / `font.xml` / `license.txt` / `report.json` 等を examples へコピーし、`provenance.json` に commit と SHA-256 を記録します。TTF ソースや GitHub からの runtime 取得は行いません。
 
-## 基本用法
+ブラウザ sandbox: `http://localhost:5173/?scene=integration`
+
+| Scene | URL |
+|---|---|
+| Integration (message → choice) | `?scene=integration` |
+| Integration restart during say | `?scene=integration&exercise=restart-say` |
+| Integration restart during choose | `?scene=integration&exercise=restart-choose` |
+| Message | `?scene=message` |
+| Choice | `?scene=choice` |
+| WindowBase | `?scene=window-base` |
+| Lifecycle (base / restart) | `?scene=lifecycle` / `?scene=lifecycle&mode=restart-say` |
+| Clipping spike | `?scene=clipping` |
+| Bitmap font spike | `?scene=bitmap-font` |
+| Scroll | `?scene=scroll` |
+| Long list | `?scene=long-list` |
+| NineSlice chrome | `?scene=nineslice` |
+| Command + help | `?scene=command-help` |
+| Log + document | `?scene=log-document` |
+| Focus + modal | `?scene=focus-modal` |
+| Message portrait | `?scene=message-portrait` |
+| Font fallback | `?scene=font-fallback` |
+
+## Scene セットアップ
+
+フォントは Scene `preload()` で **Phaser 標準ローダー** を使い、ウィンドウ生成前に cache へ登録します。
 
 ```ts
-this.load.bitmapFont("jf-dot-mplus12", "/examples/assets/fonts/jf-dot-mplus12/font.png", "/examples/assets/fonts/jf-dot-mplus12/font.xml");
+import Phaser from "phaser";
+import {
+  MessageWindow,
+  ChoiceWindow,
+  PhaserWindowInput,
+  DEFAULT_BITMAP_FONT_ASSET,
+} from "reusable-phaser4-window-system";
 
-await messageWindow.say("NPC", "こんにちは。次のページです。\n改行もできます。");
-const result = await choiceWindow.choose(["Attack", "Defend", "Run"]);
+class GameScene extends Phaser.Scene {
+  private messageWindow!: MessageWindow;
+  private choiceWindow!: ChoiceWindow;
+  private sharedInput!: PhaserWindowInput;
+
+  preload(): void {
+    this.load.bitmapFont(
+      DEFAULT_BITMAP_FONT_ASSET.key,
+      DEFAULT_BITMAP_FONT_ASSET.textureURL,
+      DEFAULT_BITMAP_FONT_ASSET.fontDataURL,
+    );
+  }
+
+  create(): void {
+    this.cameras.main.roundPixels = true;
+    this.sharedInput = new PhaserWindowInput(this);
+    this.messageWindow = new MessageWindow(
+      this,
+      { x: 40, y: 40, width: 520, height: 160, theme: { text: { fontKey: DEFAULT_BITMAP_FONT_ASSET.key } } },
+      { input: this.sharedInput, ownsInput: true },
+    );
+    this.choiceWindow = new ChoiceWindow(
+      this,
+      { x: 120, y: 220, width: 280, height: 140, theme: { text: { fontKey: DEFAULT_BITMAP_FONT_ASSET.key } } },
+      { input: this.sharedInput, ownsInput: false },
+    );
+  }
+
+  update(time: number, delta: number): void {
+    this.sharedInput.update(delta);
+    this.messageWindow.update(time, delta);
+    this.choiceWindow.update(time, delta);
+  }
+}
 ```
 
-## 設計方針
+## 入力の所有権
 
-- ウィンドウ内テキストは `BitmapText` のみ（Phaser `Text` / システムフォント禁止）
-- フォントは `reusable_pixel_font_builder` の `font.png` + `font.xml` を Phaser 標準ローダーで読み込む
-- 入力は `WindowInputAdapter` 経由のセマンティック API
-- `WindowBase` が geometry / clipping / transition を所有
+- `PhaserWindowInput` は Scene にバインドされます。複数ウィンドウで **1 つのアダプタを共有** し、`activate()` / `deactivate()` で排他的に入力を渡します。
+- `ownsInput: true` のウィンドウだけが `destroy()` 時にアダプタを `dispose()` します。共有時は 1 ウィンドウのみ `true` にしてください。
+- 各ウィンドウは `canConsumeInput()`（open + visible + active + enabled）を満たすときだけ confirm/cancel を消費します。
 
-詳細は [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) を参照してください。
+## 基本 API
+
+```ts
+await messageWindow.say("NPC", "こんにちは。次のページです。\n改行もできます。");
+
+const result = await choiceWindow.choose(["Attack", "Defend", "Run"]);
+if (result.status === "selected") {
+  console.log(result.item.label);
+}
+```
+
+## Phase 2 の追加
+
+```ts
+const result = await commandWindow.chooseCommands([
+  { id: "attack", label: "Attack", enabled: true, help: "Strike the foe." },
+]);
+helpWindow.setHelp(result.status === "selected" ? result.command.help ?? null : null);
+
+focus.acquire(commandWindow, { modal: true });
+scrollable.setScrollOffset(120);
+```
+
+chrome 差し替えは `createRenderer` + `createNineSliceWindowRenderer`（テクスチャ未ロードは `MissingWindowSkinError`）。focus は Scene 所有の `WindowFocusController` です。
+
+## テーマ
+
+`WindowConfig.theme` に部分指定でき、`resolveWindowTheme()` が immutable な既定値へマージします。背景色/枠/パディング/ビットマップテキストスタイル/カーソル/トランジション時間を変更できます。
+
+## ライフサイクル
+
+- `open()` / `close()` — 非同期トランジション。途中反転可。
+- `show()` / `hide()` — 表示のみ。非表示中は入力を消費しません。
+- `activate()` / `deactivate()` — 入力の対象ウィンドウ切替。
+- `destroy()` — Game Object、clipper、renderer、入力購読を解放。進行中 Promise は 1 回だけ settle します。
+- Scene `shutdown` / `destroy` — `WindowBase` が自動で `destroy()` を呼びます。
+
+## エラーとキャンセル
+
+| エラー | 意味 |
+|---|---|
+| `MessageBusyError` / `ChoiceBusyError` | 同時に 2 つ目の `say` / `choose` を開始 |
+| `WindowOperationCancelledError` | 操作キャンセル（destroy 等） |
+| `WindowDestroyedError` | 破棄済みウィンドウへの操作 |
+| `MissingBitmapGlyphError` | フォントに存在しないコードポイント（**システムフォントへフォールバックしない**） |
+| `BitmapFontNotLoadedError` | `preload()` 漏れ |
+| `FontSwapBusyError` | 進行中の `say` / `choose` 中に `setFontKey` |
+
+## ビットマップフォント要件
+
+- 必須 artifact ペア: **`font.png` + AngelCode `font.xml`**
+- 標準ローダー: `scene.load.bitmapFont(key, textureURL, fontDataURL)` — 本ライブラリは XML/JSON パーサを export しません
+- upstream: [`reusable_pixel_font_builder`](https://github.com/junt74-itch/reusable_pixel_font_builder) を pin し `license.txt` を配布物と一緒に保持
+- 欠損グリフ: layout 前に検出し typed error を throw（ブラウザ/ OS フォントへ silently fallback しない）
+- 明示フォールバック: `theme.text.fontKeys` は builder の cache key のみ。`setFontKey` はアイドル時のみ
+- 意味イベント: `bindWindowA11y`（DOM なし）。配置: `layoutWindowInViewport`（WindowBase はカメラを購読しない）
+- ピクセル忠実度: ネイティブ整数 `fontSize`、整数 `scale`、整数座標、`roundPixels`、nearest-neighbor サンプリング（MVP は小数 scale 非対応）
+
+## ブラウザサポート
+
+- **WebGL** を primary とし、content clipping は WebGL filter mask（[ADR 0001](docs/adr/0001-content-clipping.md)）
+- **Canvas** では GeometryMask fallback。未サポート renderer では `ContentClipperUnsupportedError`
+- ゲームパッド: 接続された **最初の 1 台のみ** ポーリング（MVP 制限）
+
+## MVP 制限
+
+日本語禁則処理なし、グローバル `WindowManager` singleton なし（Scene 所有の `WindowFocusController` はある）、ゲームパッドは first pad only、a11y は意味イベントのみ（DOM overlay なし）。リストは content を超えるとスクロールします。詳細は [`docs/MVP_RELEASE_CHECKLIST.md`](docs/MVP_RELEASE_CHECKLIST.md) と [`docs/PHASE2_RELEASE_CHECKLIST.md`](docs/PHASE2_RELEASE_CHECKLIST.md)。
+
+## 詳細 API
+
+[`docs/API.md`](docs/API.md) を参照してください。実装計画は [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) と [`docs/PHASE2_IMPLEMENTATION_PLAN.md`](docs/PHASE2_IMPLEMENTATION_PLAN.md)。

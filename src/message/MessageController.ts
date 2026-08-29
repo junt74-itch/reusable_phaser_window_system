@@ -1,11 +1,13 @@
 import type { WindowInputAdapter } from "../input/WindowInputAdapter.ts";
-import type { MessageToken } from "./types.ts";
+import type { MessageAudioHooks, MessageToken } from "./types.ts";
 import {
   createInitialTextState,
+  getRevealedPageColors,
   getRevealedPageText,
   reduceTextState,
   requiresAdvanceInput,
   type TextState,
+  type TextStateEffect,
 } from "./TextState.ts";
 import { WindowOperationCancelledError } from "../core/types.ts";
 
@@ -21,10 +23,14 @@ export interface MessageStartRequest {
   readonly tokens: readonly MessageToken[];
   readonly charsPerSecond: number;
   readonly layoutPageBreaksByPage?: readonly (readonly number[])[];
+  readonly autoAdvanceMs?: number;
+  readonly autoAdvancePause?: boolean;
+  readonly hooks?: MessageAudioHooks;
 }
 
 export interface MessageRenderSnapshot {
   readonly revealedText: string;
+  readonly revealedColors: readonly (number | null)[];
   readonly pageIndex: number;
   readonly layoutPageIndex: number;
   readonly pausedForAdvance: boolean;
@@ -49,11 +55,17 @@ export class MessageController {
   private subscriptions: Array<{ unsubscribe: () => void }> = [];
   private latestSnapshot: MessageRenderSnapshot = {
     revealedText: "",
+    revealedColors: [],
     pageIndex: 0,
     layoutPageIndex: 0,
     pausedForAdvance: false,
     completed: false,
   };
+  private autoAdvanceMs = 0;
+  private autoAdvancePause = false;
+  private autoAdvanceElapsedMs = 0;
+  private hooks: MessageAudioHooks = {};
+  private readonly snapshotListeners = new Set<(snapshot: MessageRenderSnapshot) => void>();
 
   public constructor(
     private readonly input: WindowInputAdapter | null,
@@ -68,6 +80,20 @@ export class MessageController {
     return this.busy;
   }
 
+  public subscribeSnapshot(
+    listener: (snapshot: MessageRenderSnapshot) => void,
+  ): { unsubscribe(): void } {
+    if (this.disposed) {
+      return { unsubscribe: () => undefined };
+    }
+    this.snapshotListeners.add(listener);
+    return {
+      unsubscribe: () => {
+        this.snapshotListeners.delete(listener);
+      },
+    };
+  }
+
   public start(request: MessageStartRequest): Promise<MessageRenderSnapshot> {
     if (this.disposed) {
       return Promise.reject(new WindowOperationCancelledError("disposed"));
@@ -79,6 +105,10 @@ export class MessageController {
     this.tokens = request.tokens;
     this.layoutPageBreaksByPage = request.layoutPageBreaksByPage ?? [];
     this.charsPerSecond = request.charsPerSecond;
+    this.autoAdvanceMs = request.autoAdvanceMs ?? 0;
+    this.autoAdvancePause = request.autoAdvancePause === true;
+    this.autoAdvanceElapsedMs = 0;
+    this.hooks = request.hooks ?? {};
     this.state = createInitialTextState();
     this.bindInput();
     this.publishSnapshot();
@@ -92,6 +122,7 @@ export class MessageController {
     if (!this.busy || this.disposed) {
       return;
     }
+    const previousLength = this.latestSnapshot.revealedText.length;
     const result = reduceTextState(
       this.tokens,
       this.state,
@@ -100,13 +131,19 @@ export class MessageController {
       { layoutPageBreaksByPage: this.layoutPageBreaksByPage },
     );
     this.state = result.state;
-    this.publishSnapshot();
+    this.emitEffects(result.effects);
+    this.publishSnapshot(previousLength);
     if (this.state.completed) {
       this.finish();
+      return;
     }
+    this.tickAutoAdvance(deltaMs);
   }
 
   public cancelOperation(reason = "cancelled"): void {
+    if (this.busy && !this.disposed) {
+      this.hooks.onCancel?.();
+    }
     this.finalizePending(new WindowOperationCancelledError(reason));
   }
 
@@ -116,6 +153,7 @@ export class MessageController {
     }
     this.disposed = true;
     this.unbindInput();
+    this.snapshotListeners.clear();
     this.finalizePending(new WindowOperationCancelledError(reason));
   }
 
@@ -151,7 +189,12 @@ export class MessageController {
   }
 
   private handleConfirm(): void {
-    if (this.state.pausedForAdvance) {
+    if (this.disposed || !this.busy) {
+      return;
+    }
+    this.autoAdvanceElapsedMs = 0;
+    this.hooks.onConfirm?.();
+    if (requiresAdvanceInput(this.tokens, this.state, this.layoutPageBreaksByPage)) {
       const result = reduceTextState(
         this.tokens,
         this.state,
@@ -160,6 +203,7 @@ export class MessageController {
         { layoutPageBreaksByPage: this.layoutPageBreaksByPage },
       );
       this.state = result.state;
+      this.emitEffects(result.effects);
       this.publishSnapshot();
       if (this.state.completed) {
         this.finish();
@@ -182,20 +226,91 @@ export class MessageController {
       { layoutPageBreaksByPage: this.layoutPageBreaksByPage },
     );
     this.state = result.state;
+    this.emitEffects(result.effects);
     this.publishSnapshot();
     if (this.state.completed) {
       this.finish();
     }
   }
 
-  private publishSnapshot(): void {
+  private tickAutoAdvance(deltaMs: number): void {
+    if (!this.shouldAutoAdvance()) {
+      this.autoAdvanceElapsedMs = 0;
+      return;
+    }
+    this.autoAdvanceElapsedMs += deltaMs;
+    if (this.autoAdvanceElapsedMs < this.autoAdvanceMs) {
+      return;
+    }
+    this.autoAdvanceElapsedMs = 0;
+    const result = reduceTextState(
+      this.tokens,
+      this.state,
+      { advance: true },
+      this.charsPerSecond,
+      { layoutPageBreaksByPage: this.layoutPageBreaksByPage },
+    );
+    this.state = result.state;
+    this.emitEffects(result.effects);
+    this.publishSnapshot();
+    if (this.state.completed) {
+      this.finish();
+    }
+  }
+
+  private shouldAutoAdvance(): boolean {
+    if (this.autoAdvanceMs <= 0 || !this.state.pausedForAdvance) {
+      return false;
+    }
+    const token = this.tokens[this.state.tokenIndex];
+    if (token?.type === "pause" && !this.autoAdvancePause) {
+      return false;
+    }
+    return true;
+  }
+
+  private emitEffects(effects: readonly TextStateEffect[]): void {
+    if (this.disposed) {
+      return;
+    }
+    for (const effect of effects) {
+      if (effect.type === "pageChanged") {
+        this.hooks.onPage?.();
+      }
+    }
+  }
+
+  private invokeTypeHooks(previousLength: number): void {
+    if (this.disposed) {
+      return;
+    }
+    const nextLength = this.latestSnapshot.revealedText.length;
+    if (nextLength <= previousLength) {
+      return;
+    }
+    const count = nextLength - previousLength;
+    for (let index = 0; index < count; index += 1) {
+      this.hooks.onType?.();
+    }
+  }
+
+  private publishSnapshot(previousLength?: number): void {
     this.latestSnapshot = {
       revealedText: getRevealedPageText(this.tokens, this.state, this.layoutPageBreaksByPage),
+      revealedColors: getRevealedPageColors(this.tokens, this.state, this.layoutPageBreaksByPage),
       pageIndex: this.state.pageIndex,
       layoutPageIndex: this.state.layoutPageIndex,
       pausedForAdvance: requiresAdvanceInput(this.tokens, this.state, this.layoutPageBreaksByPage),
       completed: this.state.completed,
     };
+    if (previousLength !== undefined) {
+      this.invokeTypeHooks(previousLength);
+    }
+    if (!this.disposed) {
+      for (const listener of [...this.snapshotListeners]) {
+        listener(this.latestSnapshot);
+      }
+    }
   }
 
   private finish(): void {

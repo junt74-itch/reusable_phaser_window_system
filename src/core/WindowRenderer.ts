@@ -1,4 +1,16 @@
+import type Phaser from "phaser";
 import type { ResolvedWindowTheme } from "./types.ts";
+
+/** Context passed to {@link WindowRendererFactory} when a window is constructed. */
+export interface WindowRendererFactoryContext {
+  readonly scene: Phaser.Scene;
+  readonly root: Phaser.GameObjects.Container;
+}
+
+/** Factory that supplies replaceable window chrome. */
+export type WindowRendererFactory = (
+  context: WindowRendererFactoryContext,
+) => WindowRenderer;
 
 /** Minimal Graphics-like surface for headless renderer tests. */
 export interface GraphicsLike {

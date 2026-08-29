@@ -4,7 +4,9 @@ import type {
   WindowInputAction,
   WindowInputPhase,
   WindowInputSource,
+  WindowDragEvent,
   WindowPointerEvent,
+  WindowWheelEvent,
 } from "./types.ts";
 import { BaseWindowInputAdapter } from "./WindowInputAdapter.ts";
 
@@ -66,10 +68,28 @@ export class PhaserWindowInput extends BaseWindowInputAdapter {
   private readonly pointerDownHandler: (pointer: Phaser.Input.Pointer) => void;
   private readonly pointerUpHandler: (pointer: Phaser.Input.Pointer) => void;
   private readonly pointerMoveHandler: (pointer: Phaser.Input.Pointer) => void;
+  private readonly wheelHandler: (
+    pointer: Phaser.Input.Pointer,
+    currentlyOver: Phaser.GameObjects.GameObject[],
+    deltaX: number,
+    deltaY: number,
+    deltaZ: number,
+  ) => void;
   private readonly shutdownHandler: () => void;
   private readonly pressedKeys = new Set<number>();
   private readonly repeatAccumMs = new Map<number, number>();
   private readonly gamepadPrevious = new Map<number, Set<WindowInputAction>>();
+  private readonly activeDrags = new Map<
+    number,
+    {
+      localX: number;
+      localY: number;
+      worldX: number;
+      worldY: number;
+      remainderX: number;
+      remainderY: number;
+    }
+  >();
   private gamepadRepeatMs = 0;
 
   public constructor(scene: Phaser.Scene, options: PhaserWindowInputOptions = {}) {
@@ -87,17 +107,28 @@ export class PhaserWindowInput extends BaseWindowInputAdapter {
 
     this.keyDownHandler = (event) => this.handleKey(event, "pressed");
     this.keyUpHandler = (event) => this.handleKey(event, "released");
-    this.pointerDownHandler = (pointer) => this.emitPointerFromPhaser(pointer, "pressed", true);
-    this.pointerUpHandler = (pointer) => this.emitPointerFromPhaser(pointer, "released", false);
+    this.pointerDownHandler = (pointer) => {
+      this.emitPointerFromPhaser(pointer, "pressed", true);
+      this.emitDragFromPhaser(pointer, "started");
+    };
+    this.pointerUpHandler = (pointer) => {
+      this.emitPointerFromPhaser(pointer, "released", false);
+      this.emitDragFromPhaser(pointer, "ended");
+    };
     this.pointerMoveHandler = (pointer) => {
+      this.emitPointerFromPhaser(pointer, "repeated", pointer.isDown);
       if (pointer.isDown) {
-        this.emitPointerFromPhaser(pointer, "repeated", true);
+        this.emitDragFromPhaser(pointer, "moved");
       }
+    };
+    this.wheelHandler = (pointer, _currentlyOver, deltaX, deltaY, deltaZ) => {
+      this.emitWheelFromPhaser(pointer, deltaX, deltaY, deltaZ);
     };
     this.shutdownHandler = () => this.dispose();
 
     this.registerKeyboard();
     this.registerPointer();
+    this.registerWheel();
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdownHandler);
     scene.events.once(Phaser.Scenes.Events.DESTROY, this.shutdownHandler);
   }
@@ -110,7 +141,9 @@ export class PhaserWindowInput extends BaseWindowInputAdapter {
     this.scene.input.keyboard?.off("keyup", this.keyUpHandler);
     this.scene.input.off("pointerdown", this.pointerDownHandler);
     this.scene.input.off("pointerup", this.pointerUpHandler);
+    this.scene.input.off("pointerupoutside", this.pointerUpHandler);
     this.scene.input.off("pointermove", this.pointerMoveHandler);
+    this.scene.input.off("wheel", this.wheelHandler);
     this.scene.events.off(Phaser.Scenes.Events.SHUTDOWN, this.shutdownHandler);
     this.scene.events.off(Phaser.Scenes.Events.DESTROY, this.shutdownHandler);
     for (const key of this.keyObjects) {
@@ -120,6 +153,7 @@ export class PhaserWindowInput extends BaseWindowInputAdapter {
     this.pressedKeys.clear();
     this.repeatAccumMs.clear();
     this.gamepadPrevious.clear();
+    this.activeDrags.clear();
     super.dispose();
   }
 
@@ -152,7 +186,12 @@ export class PhaserWindowInput extends BaseWindowInputAdapter {
   private registerPointer(): void {
     this.scene.input.on("pointerdown", this.pointerDownHandler);
     this.scene.input.on("pointerup", this.pointerUpHandler);
+    this.scene.input.on("pointerupoutside", this.pointerUpHandler);
     this.scene.input.on("pointermove", this.pointerMoveHandler);
+  }
+
+  private registerWheel(): void {
+    this.scene.input.on("wheel", this.wheelHandler);
   }
 
   private handleKey(event: KeyboardEvent, phase: WindowInputPhase): void {
@@ -271,6 +310,101 @@ export class PhaserWindowInput extends BaseWindowInputAdapter {
       source: "pointer",
     };
     this.emitPointer(event);
+  }
+
+  private emitWheelFromPhaser(
+    pointer: Phaser.Input.Pointer,
+    deltaX: number,
+    deltaY: number,
+    deltaZ: number,
+  ): void {
+    const event: WindowWheelEvent = {
+      deltaX,
+      deltaY,
+      deltaZ,
+      pointerId: pointer.id,
+      worldX: pointer.worldX,
+      worldY: pointer.worldY,
+      timestamp: this.scene.time.now,
+      source: "pointer",
+    };
+    this.emitWheel(event);
+  }
+
+  private emitDragFromPhaser(
+    pointer: Phaser.Input.Pointer,
+    phase: WindowDragEvent["phase"],
+  ): void {
+    const pointerId = pointer.id;
+    const world = this.localToWorld(pointer.worldX, pointer.worldY);
+    const localX = pointer.x;
+    const localY = pointer.y;
+    const worldX = world.worldX;
+    const worldY = world.worldY;
+
+    if (phase === "started") {
+      this.activeDrags.set(pointerId, {
+        localX,
+        localY,
+        worldX,
+        worldY,
+        remainderX: 0,
+        remainderY: 0,
+      });
+      this.emitDragSnapshot(pointerId, phase, localX, localY, worldX, worldY, 0, 0);
+      return;
+    }
+
+    const previous = this.activeDrags.get(pointerId);
+    if (previous === undefined) {
+      return;
+    }
+
+    const totalDeltaX = worldX - previous.worldX + previous.remainderX;
+    const totalDeltaY = worldY - previous.worldY + previous.remainderY;
+    const deltaX = Math.trunc(totalDeltaX);
+    const deltaY = Math.trunc(totalDeltaY);
+    const nextDragState = {
+      localX,
+      localY,
+      worldX,
+      worldY,
+      remainderX: totalDeltaX - deltaX,
+      remainderY: totalDeltaY - deltaY,
+    };
+    if (phase === "moved") {
+      this.activeDrags.set(pointerId, nextDragState);
+      this.emitDragSnapshot(pointerId, phase, localX, localY, worldX, worldY, deltaX, deltaY);
+      return;
+    }
+
+    this.activeDrags.delete(pointerId);
+    this.emitDragSnapshot(pointerId, phase, localX, localY, worldX, worldY, deltaX, deltaY);
+  }
+
+  private emitDragSnapshot(
+    pointerId: number,
+    phase: WindowDragEvent["phase"],
+    localX: number,
+    localY: number,
+    worldX: number,
+    worldY: number,
+    deltaX: number,
+    deltaY: number,
+  ): void {
+    const event: WindowDragEvent = {
+      phase,
+      pointerId,
+      localX: Math.trunc(localX),
+      localY: Math.trunc(localY),
+      worldX: Math.trunc(worldX),
+      worldY: Math.trunc(worldY),
+      deltaX: Math.trunc(deltaX),
+      deltaY: Math.trunc(deltaY),
+      timestamp: this.scene.time.now,
+      source: "pointer",
+    };
+    this.emitDrag(event);
   }
 
   private emitActionSnapshot(

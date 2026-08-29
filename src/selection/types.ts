@@ -16,4 +16,6 @@ export interface SelectionSubscription {
 export interface SelectionControllerOptions {
   readonly columns?: number;
   readonly wrap?: boolean;
+  readonly onConfirm?: () => void;
+  readonly onCancel?: () => void;
 }

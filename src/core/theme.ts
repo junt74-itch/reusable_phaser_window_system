@@ -18,6 +18,7 @@ const DEFAULT_PADDING: WindowPadding = {
 
 const DEFAULT_TEXT: BitmapTextStyle = {
   fontKey: "jf-dot-mplus12",
+  fontKeys: ["jf-dot-mplus12"],
   fontSize: 12,
   scale: 1,
   tint: 0xffffff,
@@ -27,9 +28,10 @@ const DEFAULT_TEXT: BitmapTextStyle = {
 
 const DEFAULT_CURSOR: CursorStyle = {
   color: 0xffffff,
-  alpha: 1,
-  width: 2,
+  alpha: 0.3,
+  width: 0,
   padding: 4,
+  blinkPeriodMs: 0,
 };
 
 const DEFAULT_THEME: ResolvedWindowTheme = {
@@ -92,9 +94,31 @@ function validateInteger(label: string, value: number): void {
   }
 }
 
+function resolveFontKeyChain(
+  fontKeys: readonly string[] | undefined,
+  fontKey: string,
+): readonly string[] {
+  const source = fontKeys !== undefined && fontKeys.length > 0 ? fontKeys : [fontKey];
+  const unique: string[] = [];
+  for (const key of source) {
+    if (key.length === 0) {
+      throw new WindowConfigError("text.fontKeys must not contain empty keys.");
+    }
+    if (!unique.includes(key)) {
+      unique.push(key);
+    }
+  }
+  if (unique.length === 0) {
+    throw new WindowConfigError("text.fontKeys must not be empty.");
+  }
+  return unique;
+}
+
 function resolveBitmapTextStyle(partial: Partial<BitmapTextStyle> | undefined): BitmapTextStyle {
   const merged = { ...DEFAULT_TEXT, ...partial };
-  if (merged.fontKey.length === 0) {
+  const fontKeys = resolveFontKeyChain(partial?.fontKeys, merged.fontKey);
+  const fontKey = fontKeys[0];
+  if (fontKey === undefined || fontKey.length === 0) {
     throw new WindowConfigError("text.fontKey must not be empty.");
   }
   validatePositiveFinite("text.fontSize", merged.fontSize);
@@ -110,7 +134,15 @@ function resolveBitmapTextStyle(partial: Partial<BitmapTextStyle> | undefined): 
   if (!isFiniteNumber(merged.lineSpacing)) {
     throw new WindowConfigError("text.lineSpacing must be a finite number.");
   }
-  return merged;
+  return {
+    fontKey,
+    fontKeys,
+    fontSize: merged.fontSize,
+    scale: merged.scale,
+    tint: merged.tint,
+    letterSpacing: merged.letterSpacing,
+    lineSpacing: merged.lineSpacing,
+  };
 }
 
 function resolveCursorStyle(partial: Partial<CursorStyle> | undefined): CursorStyle {
@@ -121,6 +153,7 @@ function resolveCursorStyle(partial: Partial<CursorStyle> | undefined): CursorSt
   validateNonNegativeFinite("cursor.alpha", merged.alpha);
   validateNonNegativeFinite("cursor.width", merged.width);
   validateNonNegativeFinite("cursor.padding", merged.padding);
+  validateNonNegativeFinite("cursor.blinkPeriodMs", merged.blinkPeriodMs);
   return merged;
 }
 
@@ -132,7 +165,7 @@ export function resolveWindowTheme(partial?: WindowTheme): ResolvedWindowTheme {
     return {
       ...DEFAULT_THEME,
       padding: { ...DEFAULT_PADDING },
-      text: { ...DEFAULT_TEXT },
+      text: { ...DEFAULT_TEXT, fontKeys: [...DEFAULT_TEXT.fontKeys] },
       cursor: { ...DEFAULT_CURSOR },
     };
   }
