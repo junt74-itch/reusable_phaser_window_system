@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "reusable-phaser4-window-system": ["./dist/index.d.ts"]
+    }
+  },
+  "include": ["examples/consumer/**/*.ts"],
+  "exclude": []
+}

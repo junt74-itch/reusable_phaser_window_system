@@ -1,0 +1,35 @@
+{
+  "name": "reusable-phaser4-window-system",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "test": "bun test",
+    "test:unit": "bun test tests/core tests/input tests/integration tests/message tests/selection tests/text tests/scroll tests/skin tests/command tests/help tests/log tests/document tests/focus tests/a11y tests/layout tests/examples tests/scripts tests/scaffold.test.ts",
+    "test:package": "bun test tests/package",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build && tsc -p tsconfig.build.json --emitDeclarationOnly",
+    "check": "bun run test:unit && bun run typecheck && bun run build && bun run test:package && bun run typecheck:consumer",
+    "typecheck:consumer": "tsc --noEmit -p tsconfig.consumer.json",
+    "font:sync": "bun run scripts/sync-font-assets.ts"
+  },
+  "dependencies": {
+    "phaser": "4.2.1"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.0",
+    "typescript": "7.0.2",
+    "vite": "8.2.2"
+  }
+}

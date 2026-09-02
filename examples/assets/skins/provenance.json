@@ -1,0 +1,8 @@
+{
+  "name": "window-placeholder",
+  "source": "original asset created for this repository",
+  "license": "same as this repository",
+  "notes": "Not derived from RPG Maker Window.png or any Enterbrain/Kadokawa skin.",
+  "slice": { "left": 8, "right": 8, "top": 8, "bottom": 8 },
+  "size": { "width": 48, "height": 48 }
+}
