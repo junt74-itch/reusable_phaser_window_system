@@ -127,7 +127,7 @@ helpWindow.setHelp({
 });
 ```
 
-詳細は [`docs/API.md`](docs/API.md) の Rich text を参照してください。
+ゲームへの組み込み方は [`docs/RICH_TEXT_GUIDE.md`](docs/RICH_TEXT_GUIDE.md)、公開型の詳細は [`docs/API.md`](docs/API.md) の Rich text を参照してください。
 
 ## Phase 2 の追加
 

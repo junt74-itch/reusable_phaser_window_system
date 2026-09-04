@@ -14,6 +14,7 @@
 | Git submodule として導入する | [SUBMODULE.md](SUBMODULE.md) |
 | 現行仕様と保証範囲を知る | [SPECIFICATION.md](SPECIFICATION.md) |
 | class / option / error を調べる | [API.md](API.md) |
+| リッチテキストの使い方を知る | [RICH_TEXT_GUIDE.md](RICH_TEXT_GUIDE.md) |
 | ソースの責務を辿る | [../src/README.md](../src/README.md) |
 | 描画・scroll・focus の設計理由を知る | [adr/](adr/) |
 | Phase 1 の検証証跡を見る | [MVP_RELEASE_CHECKLIST.md](MVP_RELEASE_CHECKLIST.md) |

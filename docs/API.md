@@ -69,6 +69,8 @@ scene.load.bitmapFont(
 
 入力は `string | RichText` です。マークアップ言語はありません。`{font}` / `{size}` トークンはありません。
 
+ゲーム制作者向けの導入手順と用途別サンプルは[リッチテキスト利用ガイド](RICH_TEXT_GUIDE.md)を参照してください。
+
 ```ts
 import type { RichText, RichTextSpan, TextAlign, WindowTextContent } from "reusable-phaser4-window-system";
 import { layoutRichText } from "reusable-phaser4-window-system";
