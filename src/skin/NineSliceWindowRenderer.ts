@@ -4,8 +4,10 @@ import type {
   GraphicsLike,
   WindowRenderer,
   WindowRendererFactoryContext,
+  WindowRendererFactory,
 } from "../core/WindowRenderer.ts";
-import { MissingWindowSkinError, type NineSliceSkinOptions } from "./types.ts";
+import { MissingWindowSkinError, type NineSliceSkinOptions, type NineSliceImageSkinOptions } from "./types.ts";
+import { resolveNineSliceSkin, validateNineSliceFrame } from "./resolveNineSliceSkin.ts";
 
 class UnusedChromeGraphics implements GraphicsLike {
   public clear(): void {}
@@ -41,14 +43,20 @@ export class NineSliceWindowRenderer implements WindowRenderer {
   private openness = 1;
   private destroyed = false;
 
-  public constructor(context: WindowRendererFactoryContext, options: NineSliceSkinOptions) {
+  public constructor(context: WindowRendererFactoryContext, skin: NineSliceSkinOptions | NineSliceImageSkinOptions) {
+    const options = resolveNineSliceSkin(skin);
     if (!context.scene.textures.exists(options.textureKey)) {
       throw new MissingWindowSkinError(options.textureKey);
     }
     this.options = options;
     const texture = context.scene.textures.get(options.textureKey);
-    texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     const frame = options.frame ?? 0;
+    if (frame && !texture.has(String(frame))) {
+      throw new RangeError(`Window skin frame "${frame}" does not exist in "${options.textureKey}".`);
+    }
+    const sourceFrame = texture.get(frame);
+    validateNineSliceFrame(options, sourceFrame.width, sourceFrame.height);
+    texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
     this.chrome = context.scene.add.nineslice(
       0,
       0,
@@ -65,6 +73,8 @@ export class NineSliceWindowRenderer implements WindowRenderer {
     );
     this.chrome.setOrigin(0, 0);
     this.chrome.setPosition(0, 0);
+    this.chrome.setTintMode(Phaser.TintModes.MULTIPLY);
+    this.chrome.setTint(options.tint ?? 0xffffff);
     context.root.add(this.chrome);
   }
 
@@ -105,8 +115,19 @@ export class NineSliceWindowRenderer implements WindowRenderer {
 }
 
 export function createNineSliceWindowRenderer(
+  options: NineSliceSkinOptions | NineSliceImageSkinOptions,
+): WindowRendererFactory;
+export function createNineSliceWindowRenderer(
   context: WindowRendererFactoryContext,
-  options: NineSliceSkinOptions,
-): WindowRenderer {
-  return new NineSliceWindowRenderer(context, options);
+  options: NineSliceSkinOptions | NineSliceImageSkinOptions,
+): WindowRenderer;
+export function createNineSliceWindowRenderer(
+  contextOrOptions: WindowRendererFactoryContext | NineSliceSkinOptions | NineSliceImageSkinOptions,
+  options?: NineSliceSkinOptions | NineSliceImageSkinOptions,
+): WindowRenderer | WindowRendererFactory {
+  if ("textureKey" in contextOrOptions) {
+    const skin = resolveNineSliceSkin(contextOrOptions);
+    return (context) => new NineSliceWindowRenderer(context, skin);
+  }
+  return new NineSliceWindowRenderer(contextOrOptions, options!);
 }

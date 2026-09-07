@@ -4,19 +4,15 @@ import { DEFAULT_BITMAP_FONT_ASSET } from "../../src/text/BitmapFontAsset.ts";
 import { WindowBase } from "../../src/core/WindowBase.ts";
 import { ChoiceWindow } from "../../src/choice/ChoiceWindow.ts";
 import { PhaserWindowInput } from "../../src/input/PhaserWindowInput.ts";
-import type { WindowRendererFactoryContext } from "../../src/core/WindowRenderer.ts";
 import { createNineSliceWindowRenderer } from "../../src/skin/NineSliceWindowRenderer.ts";
-import type { NineSliceSkinOptions } from "../../src/skin/types.ts";
 
 export const PLACEHOLDER_WINDOW_SKIN_KEY = "window-placeholder";
 export const PLACEHOLDER_WINDOW_SKIN_URL = "/examples/assets/skins/window-placeholder.png";
 
-const PLACEHOLDER_SLICES: Omit<NineSliceSkinOptions, "textureKey"> = {
-  leftWidth: 8,
-  rightWidth: 8,
-  topHeight: 8,
-  bottomHeight: 8,
-};
+const WINDOW_SKINS = [
+  { key: "windowbase-1", url: "/assets/window_base_png/windowbase_1_padding-12.png" },
+  { key: "windowbase-8.1", url: "/assets/window_base_png/windowbase_8.1_padding-12.png" },
+] as const;
 
 export class NineSliceScene extends Phaser.Scene {
   private windowInput: PhaserWindowInput | null = null;
@@ -33,17 +29,17 @@ export class NineSliceScene extends Phaser.Scene {
   public preload(): void {
     preloadDefaultBitmapFont(this);
     this.load.image(PLACEHOLDER_WINDOW_SKIN_KEY, PLACEHOLDER_WINDOW_SKIN_URL);
+    for (const skin of WINDOW_SKINS) this.load.image(skin.key, skin.url);
   }
 
   public create(): void {
     this.cameras.main.setBackgroundColor(0x101820);
     this.cameras.main.roundPixels = true;
     this.windowInput = new PhaserWindowInput(this);
-    const createRenderer = (context: WindowRendererFactoryContext) =>
-      createNineSliceWindowRenderer(context, {
-        textureKey: PLACEHOLDER_WINDOW_SKIN_KEY,
-        ...PLACEHOLDER_SLICES,
-      });
+    const createRenderer = createNineSliceWindowRenderer({
+      textureKey: WINDOW_SKINS[0].key,
+      padding: [12, 12, 12, 12],
+    });
 
     this.chromeWindow = new WindowBase(
       this,
@@ -68,7 +64,11 @@ export class NineSliceScene extends Phaser.Scene {
           cursor: { blinkPeriodMs: 800 },
         },
       },
-      { input: this.windowInput, ownsInput: true, createRenderer },
+      {
+        input: this.windowInput,
+        ownsInput: true,
+        createRenderer: createNineSliceWindowRenderer({ textureKey: WINDOW_SKINS[1].key, padding: 12 }),
+      },
     );
     this.logText = this.add.bitmapText(
       40,

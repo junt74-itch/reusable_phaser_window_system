@@ -133,7 +133,7 @@ export type {
 
 export { NineSliceWindowRenderer, createNineSliceWindowRenderer } from "./skin/NineSliceWindowRenderer.ts";
 export { MissingWindowSkinError } from "./skin/types.ts";
-export type { NineSliceSkinOptions } from "./skin/types.ts";
+export type { NineSliceSkinOptions, NineSliceImageSkinOptions, NineSlicePadding } from "./skin/types.ts";
 
 export { CommandWindow, CommandBusyError, CommandConfigurationError } from "./command/CommandWindow.ts";
 export type { CommandWindowOptions } from "./command/CommandWindow.ts";

@@ -363,7 +363,31 @@ new WindowBase(scene, config, {
 });
 ```
 
-テクスチャ未ロードは `MissingWindowSkinError` です。Graphics への silent fallback はありません。検証済み Phaser 4.2.1 API は [ADR 0003](adr/0003-window-renderer-injection.md) を参照してください。
+画像と9スライス用の余白を指定する場合は、次の短縮形を使えます。
+
+```ts
+// Scene.preload(): 画像URLを任意のキーでロード
+this.load.image("window-base", "/assets/window_base_png/windowbase_1_padding-12.png");
+
+// Scene.create(): ロード済みのキーと画像内の境界幅を指定
+const createRenderer = createNineSliceWindowRenderer({
+  textureKey: "window-base",
+  padding: [12, 12, 12, 12], // top, right, bottom, left (TRBL)
+  tint: 0x80a0ff, // 任意: 24bit RGBで下地画像を乗算着色
+});
+const win = new WindowBase(this, config, { createRenderer });
+void win.open();
+```
+
+`padding: 12` は全辺12pxの指定です。値は元画像のピクセル単位の非負整数で、左右・上下それぞれの合計は画像フレームの幅・高さ未満にします。32×32px画像に12pxを指定すると、中央8×8pxが伸縮します。ファイル名から値を自動推定する処理はありません。
+
+この `padding` は画像の分割位置です。本文領域の余白は従来どおり `theme.padding` / `setPadding()` で指定します。四隅を維持しながら辺と中央を伸縮し、`tileX` / `tileY` で繰り返し表示にも切り替えられます。表示サイズの下限は左右・上下の境界幅の合計です。上下とも0の場合はPhaserの3スライス表示になります。
+
+`tint` は `0x000000`～`0xffffff` の整数です。画像全体（枠を含む）のRGBに指定色を乗算し、画像のアルファは維持します。省略時は白（`0xffffff`）で元の色、`0x000000` は黒になります。本文には適用されません。不正な値は `RangeError` になります。
+
+同じfactoryを複数ウインドウで共有でき、`ChoiceWindow` などにも渡せます。`frame` でアトラスのフレームも指定できます。従来の `createNineSliceWindowRenderer(context, options)` と4辺の個別指定も引き続き使用でき、`tint` にも対応しています。
+
+テクスチャ未ロードは `MissingWindowSkinError`、不正な境界幅や存在しないフレームは `RangeError` です。Graphics への silent fallback はありません。検証済み Phaser 4.2.1 API は [ADR 0003](adr/0003-window-renderer-injection.md) を参照してください。`?scene=nineslice` サンプルでは追加画像2種類を12px指定で表示します。
 
 ## ライフサイクル
 
