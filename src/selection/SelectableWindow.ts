@@ -280,7 +280,13 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
       return;
     }
     const index = this.hitTestRow(localX, localY);
-    if (index !== null && (phase === "pressed" || phase === "repeated")) {
+    // A pointer move is emitted as "repeated" even when no button is held.
+    // Do not let a passive hover change keyboard/gamepad selection; a pressed
+    // pointer may still update the selection while it is being dragged.
+    if (
+      index !== null &&
+      (phase === "pressed" || (phase === "repeated" && isPrimaryDown))
+    ) {
       this.select(index);
     }
     if (phase === "pressed" && isPrimaryDown) {
