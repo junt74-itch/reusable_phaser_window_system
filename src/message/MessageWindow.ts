@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import type { WindowConfig } from "../core/types.ts";
 import { WindowDestroyedError, WindowLayoutError } from "../core/types.ts";
 import { ignoreTransitionCancellation } from "../core/windowOperations.ts";
-import type { WindowBaseOptions } from "../core/WindowBase.ts";
+import type { TextWindowBaseOptions } from "../text/TextWindowBase.ts";
 import { TextWindowBase } from "../text/TextWindowBase.ts";
 import { scaleFontMetrics } from "../text/fontMetrics.ts";
 import { flattenRichText, resolveRichTextAlign } from "../text/richText.ts";
@@ -33,7 +33,7 @@ import {
   resolveMessageSayPortrait,
 } from "./sayPreflight.ts";
 
-export interface MessageWindowOptions extends WindowBaseOptions {
+export interface MessageWindowOptions extends TextWindowBaseOptions {
   readonly portrait?: MessagePortraitOptions;
   readonly onType?: () => void;
   readonly onPage?: () => void;
