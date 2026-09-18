@@ -77,6 +77,14 @@ export type {
 } from "./text/types.ts";
 export { MissingBitmapGlyphError, BitmapFontNotLoadedError, FontSwapBusyError } from "./text/types.ts";
 export { layoutText, layoutRichText } from "./text/TextLayout.ts";
+export {
+  DEFAULT_WRITING_MODE,
+  DEFAULT_VERTICAL_WRITING_MODE,
+  resolveWritingMode,
+  isVerticalWritingMode,
+  verticalColumnIndex,
+} from "./text/writingMode.ts";
+export type { WritingMode, WritingModeOptions } from "./text/writingMode.ts";
 export { DEFAULT_BITMAP_FONT_ASSET } from "./text/BitmapFontAsset.ts";
 export type { BitmapFontAsset } from "./text/BitmapFontAsset.ts";
 export { PhaserBitmapTextMeasurer } from "./text/PhaserBitmapTextMeasurer.ts";
