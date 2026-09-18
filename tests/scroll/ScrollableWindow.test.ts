@@ -152,3 +152,17 @@ describe("ScrollbarRenderer contract", () => {
     expect(scrollbar.includes("pointerCaptured")).toBe(true);
   });
 });
+
+
+describe("horizontal scroll input contract", () => {
+  test("scroll input uses deltaX when controller axis is x", () => {
+    const source = readFileSync(join(ROOT, "src/scroll/scrollInputBinding.ts"), "utf8");
+    expect(source.includes('controller.getAxis() === "x" ? -event.deltaX : -event.deltaY')).toBe(true);
+  });
+
+  test("scroll clipping accounts for the translated body", () => {
+    const source = readFileSync(join(ROOT, "src/scroll/ScrollContentClip.ts"), "utf8");
+    expect(source.includes('axis === "x" ? body.x : body.y')).toBe(true);
+    expect(source.includes('const viewportStart = 0')).toBe(true);
+  });
+});
