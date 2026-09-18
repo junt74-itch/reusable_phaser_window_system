@@ -41,7 +41,7 @@ export function bindScrollInput(
       if (options.allowContentDrag !== undefined && !options.allowContentDrag(event)) {
         return;
       }
-      controller.scrollBy(-event.deltaY);
+      controller.scrollBy(controller.getAxis() === "x" ? -event.deltaX : -event.deltaY);
     }),
   ];
 
