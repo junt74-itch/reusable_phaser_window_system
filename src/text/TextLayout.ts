@@ -557,7 +557,7 @@ function layoutVerticalRichText(
     const presentation = verticalPresentationForm(entry.char);
     const renderedChar =
       presentation !== null &&
-      measurer.hasGlyphFor(entry.fontKey, presentation.codePointAt(0) ?? 0)
+      hasGlyphFor(measurer, entry.fontKey, presentation.codePointAt(0) ?? 0)
         ? presentation
         : entry.char;
     const measured = measurer.measureRun(renderedChar, {
