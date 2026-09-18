@@ -85,6 +85,8 @@ export {
   verticalColumnIndex,
 } from "./text/writingMode.ts";
 export type { WritingMode, WritingModeOptions } from "./text/writingMode.ts";
+export { getVerticalGlyphTransform, verticalPresentationForm } from "./text/verticalGlyphs.ts";
+export type { VerticalGlyphTransform } from "./text/verticalGlyphs.ts";
 export { DEFAULT_BITMAP_FONT_ASSET } from "./text/BitmapFontAsset.ts";
 export type { BitmapFontAsset } from "./text/BitmapFontAsset.ts";
 export { PhaserBitmapTextMeasurer } from "./text/PhaserBitmapTextMeasurer.ts";
