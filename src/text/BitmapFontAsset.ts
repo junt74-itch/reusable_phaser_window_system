@@ -5,8 +5,12 @@ export interface BitmapFontAsset {
   readonly fontDataURL: string;
 }
 
+/**
+ * Default sandbox asset paths are relative to the document base.
+ * Consumers that host assets elsewhere should override these URLs.
+ */
 export const DEFAULT_BITMAP_FONT_ASSET: BitmapFontAsset = {
   key: "jf-dot-mplus12",
-  textureURL: new URL("../../examples/assets/fonts/jf-dot-mplus12/font.png", import.meta.url).href,
-  fontDataURL: new URL("../../examples/assets/fonts/jf-dot-mplus12/font.xml", import.meta.url).href,
+  textureURL: "examples/assets/fonts/jf-dot-mplus12/font.png",
+  fontDataURL: "examples/assets/fonts/jf-dot-mplus12/font.xml",
 };
