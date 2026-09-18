@@ -105,6 +105,8 @@ export interface LayoutLineRun {
   readonly fontSize: number;
   readonly width: number;
   readonly x: number;
+  /** Clockwise rotation for vertical typography. Defaults to 0. */
+  readonly rotationDeg?: number;
 }
 
 export interface LayoutLine {
