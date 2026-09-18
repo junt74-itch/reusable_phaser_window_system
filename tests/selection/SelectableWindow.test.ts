@@ -45,3 +45,21 @@ describe("SelectableWindow rich label contract", () => {
     expect(body.includes("add.text")).toBe(false);
   });
 });
+
+
+describe("SelectableWindow vertical scrolling contract", () => {
+  test("vertical writing uses x-axis scrolling and horizontal body translation", () => {
+    expect(SOURCE.includes('new ScrollController({ axis: isVerticalWritingMode(this.writingMode) ? "x" : "y" })')).toBe(true);
+    expect(SOURCE.includes('this.scrollBody.setPosition(this.scrollEnabled ? direction * offset : 0, 0)')).toBe(true);
+    expect(SOURCE.includes('isVerticalWritingMode(this.writingMode) ? "x" : "y"')).toBe(true);
+  });
+
+  test("vertical-rl lays index zero at the right edge", () => {
+    expect(SOURCE.includes('content.width - columnWidth - logicalColumn * columnStep')).toBe(true);
+    expect(SOURCE.includes('width: columnWidth, height: content.height')).toBe(true);
+  });
+
+  test("vertical hit testing compensates for horizontal scroll", () => {
+    expect(SOURCE.includes('localX + (this.writingMode === "vertical-rl" ? -offset : offset)')).toBe(true);
+  });
+});
