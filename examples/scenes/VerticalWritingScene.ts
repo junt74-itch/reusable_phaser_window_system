@@ -9,7 +9,7 @@ import { PhaserWindowInput } from "../../src/input/PhaserWindowInput.ts";
 export class VerticalWritingScene extends Phaser.Scene {
   private helpWindow: HelpWindow | null = null;
   private choiceWindow: ChoiceWindow | null = null;
-  private input: PhaserWindowInput | null = null;
+  private windowInput: PhaserWindowInput | null = null;
 
   public constructor() {
     super("vertical-writing");
@@ -22,7 +22,7 @@ export class VerticalWritingScene extends Phaser.Scene {
   public create(): void {
     this.cameras.main.setBackgroundColor(0x101820);
     this.cameras.main.roundPixels = true;
-    this.input = new PhaserWindowInput(this);
+    this.windowInput = new PhaserWindowInput(this);
 
     const theme = { text: { fontKey: DEFAULT_BITMAP_FONT_ASSET.key } };
     this.helpWindow = new HelpWindow(
@@ -37,7 +37,7 @@ export class VerticalWritingScene extends Phaser.Scene {
       this,
       { x: 440, y: 40, width: 440, height: 420, theme },
       {
-        input: this.input,
+        input: this.windowInput,
         ownsInput: true,
         vertical: true,
         showScrollbar: true,
@@ -60,7 +60,7 @@ export class VerticalWritingScene extends Phaser.Scene {
   }
 
   public override update(time: number, delta: number): void {
-    this.input?.update(delta);
+    this.windowInput?.update(delta);
     this.helpWindow?.update(time, delta);
     this.choiceWindow?.update(time, delta);
   }
