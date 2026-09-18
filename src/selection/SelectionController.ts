@@ -16,6 +16,7 @@ export class SelectionController<T> {
   private selectedIndex = -1;
   private readonly columns: number;
   private readonly wrap: boolean;
+  private readonly writingMode: import("../text/writingMode.ts").WritingMode;
   private readonly changeListeners = new Set<SelectionChangeListener<T>>();
   private readonly confirmListeners = new Set<SelectionConfirmListener<T>>();
   private readonly cancelListeners = new Set<SelectionCancelListener>();
@@ -27,6 +28,7 @@ export class SelectionController<T> {
   public constructor(options: SelectionControllerOptions = {}) {
     this.columns = Math.max(1, options.columns ?? 1);
     this.wrap = options.wrap ?? true;
+    this.writingMode = options.writingMode ?? (options.vertical === true ? "vertical-rl" : "horizontal-tb");
     this.confirmHook = options.onConfirm ?? null;
     this.cancelHook = options.onCancel ?? null;
   }
@@ -76,7 +78,12 @@ export class SelectionController<T> {
       return;
     }
     const previous = this.selectedIndex;
-    if (action === "up") {
+    if (this.writingMode === "vertical-rl" || this.writingMode === "vertical-lr") {
+      // A vertical selectable item is a top-to-bottom text column. Items themselves
+      // progress horizontally; Japanese vertical-rl therefore advances on Left.
+      if (action === "left") this.moveByColumns(this.writingMode === "vertical-rl" ? 1 : -1);
+      else if (action === "right") this.moveByColumns(this.writingMode === "vertical-rl" ? -1 : 1);
+    } else if (action === "up") {
       this.moveByRows(-1);
     } else if (action === "down") {
       this.moveByRows(1);

@@ -99,14 +99,20 @@ export interface TextLineRange {
 
 export interface LayoutLineRun {
   readonly text: string;
+  /** Vertical offset within the logical line/column. Defaults to 0. */
+  readonly y?: number;
   readonly fontKey: string;
   readonly fontSize: number;
   readonly width: number;
   readonly x: number;
+  /** Clockwise rotation for vertical typography. Defaults to 0. */
+  readonly rotationDeg?: number;
 }
 
 export interface LayoutLine {
   readonly text: string;
+  /** Horizontal offset of a vertical column. Defaults to 0 for horizontal layout. */
+  readonly x?: number;
   readonly sourceRange: TextLineRange;
   readonly width: number;
   readonly y: number;
@@ -123,6 +129,8 @@ export interface TextLayoutResult {
 }
 
 export interface TextLayoutOptions {
+  /** Defaults to horizontal-tb. Vertical callers normally use vertical-rl. */
+  readonly writingMode?: import("./writingMode.ts").WritingMode;
   readonly width: number;
   readonly height: number;
   readonly style: BitmapTextMeasureStyle;

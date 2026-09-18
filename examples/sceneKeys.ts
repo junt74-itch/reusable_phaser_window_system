@@ -22,6 +22,7 @@ export const ALL_SCENE_KEYS = [
   ...PHASE2_SCENE_KEYS,
   "padding-chrome",
   "rich-text",
+  "vertical-writing",
 ] as const;
 
 export type SceneKey = (typeof ALL_SCENE_KEYS)[number];

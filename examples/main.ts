@@ -17,6 +17,7 @@ import { MessagePortraitScene } from "./scenes/MessagePortraitScene.ts";
 import { FontFallbackScene } from "./scenes/FontFallbackScene.ts";
 import { PaddingChromeScene } from "./scenes/PaddingChromeScene.ts";
 import { RichTextScene } from "./scenes/RichTextScene.ts";
+import { VerticalWritingScene } from "./scenes/VerticalWritingScene.ts";
 
 const scenario = new URLSearchParams(window.location.search).get("scene") ?? "integration";
 
@@ -38,6 +39,7 @@ const scenes: Record<(typeof ALL_SCENE_KEYS)[number], typeof Phaser.Scene> = {
   "font-fallback": FontFallbackScene,
   "padding-chrome": PaddingChromeScene,
   "rich-text": RichTextScene,
+  "vertical-writing": VerticalWritingScene,
 };
 
 const SelectedScene = scenes[scenario as keyof typeof scenes] ?? IntegrationScene;

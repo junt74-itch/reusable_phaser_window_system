@@ -17,6 +17,9 @@ import type {
   WindowTextContent,
 } from "./types.ts";
 import { assertFontSwapAllowed, fontKeyChainsEqual } from "./fontFallback.ts";
+import { resolveWritingMode, type WritingMode, type WritingModeOptions } from "./writingMode.ts";
+
+export interface TextWindowBaseOptions extends WindowBaseOptions, WritingModeOptions {}
 
 /**
  * Bitmap-text rendering base without message progression.
@@ -25,9 +28,11 @@ export abstract class TextWindowBase extends WindowBase {
   protected measurer: OwnedBitmapTextMeasurer;
   protected readonly textObjects: Phaser.GameObjects.BitmapText[] = [];
   private currentLayout: TextLayoutResult | null = null;
+  protected readonly writingMode: WritingMode;
 
-  public constructor(scene: Phaser.Scene, config: WindowConfig, options: WindowBaseOptions = {}) {
+  public constructor(scene: Phaser.Scene, config: WindowConfig, options: TextWindowBaseOptions = {}) {
     super(scene, config, options);
+    this.writingMode = resolveWritingMode(options);
     this.measurer = createBitmapTextMeasurer(scene, this.theme.text.fontKeys);
     this.applyBitmapSamplingToContent();
   }
@@ -91,6 +96,7 @@ export abstract class TextWindowBase extends WindowBase {
         letterSpacing: this.theme.text.letterSpacing,
       },
       lineSpacing: this.theme.text.lineSpacing,
+      writingMode: this.writingMode,
     };
     const result = layoutRichText(content, this.measurer, options);
     this.currentLayout = result;
@@ -119,8 +125,11 @@ export abstract class TextWindowBase extends WindowBase {
           style.scale,
         ).ascent;
         textObject.setPosition(
-          Math.trunc(this.getTextBodyOffsetX() + run.x),
-          Math.trunc(this.getTextBodyOffsetY() + line.y + line.ascent - runAscent),
+          Math.trunc(this.getTextBodyOffsetX() + (line.x ?? 0) + run.x),
+          Math.trunc(
+            this.getTextBodyOffsetY() + line.y + (run.y ?? 0) +
+            (this.writingMode === "horizontal-tb" ? line.ascent - runAscent : 0),
+          ),
         );
         textObject.setVisible(true);
         slot += 1;

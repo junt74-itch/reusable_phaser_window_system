@@ -92,3 +92,34 @@ describe("layoutText", () => {
     expect(result.lines.length).toBe(2);
   });
 });
+
+
+describe("vertical layout", () => {
+  test("flows glyphs top-to-bottom and columns right-to-left by default vertical mode", () => {
+    const measurer = new FakeMeasurer("abcdef");
+    const result = layoutText("abcdef", measurer, {
+      width: 42,
+      height: 28,
+      style,
+      lineSpacing: 0,
+      writingMode: "vertical-rl",
+    });
+    expect(result.lines.length).toBe(3);
+    expect(result.lines.map((line) => line.text)).toEqual(["ab", "cd", "ef"]);
+    expect((result.lines[0]?.x ?? 0)).toBeGreaterThan(result.lines[1]?.x ?? 0);
+    expect(result.lines[0]?.runs.map((run) => run.y)).toEqual([0, 14]);
+  });
+
+  test("explicit newline starts the next column", () => {
+    const measurer = new FakeMeasurer("abcd");
+    const result = layoutText("ab\ncd", measurer, {
+      width: 42,
+      height: 100,
+      style,
+      lineSpacing: 0,
+      writingMode: "vertical-rl",
+    });
+    expect(result.lines.map((line) => line.text)).toEqual(["ab", "cd"]);
+    expect((result.lines[0]?.x ?? 0)).toBeGreaterThan(result.lines[1]?.x ?? 0);
+  });
+});

@@ -48,6 +48,7 @@ Git submodule として導入する場合は、検証済み commit を親リポ�
 | Font fallback | `?scene=font-fallback` |
 | Padding + chromeless preview | `?scene=padding-chrome` |
 | Rich text | `?scene=rich-text` |
+| Japanese vertical writing | `?scene=vertical-writing` |
 
 ## Scene セットアップ
 
@@ -129,6 +130,26 @@ helpWindow.setHelp({
 
 ゲームへの組み込み方は [`docs/RICH_TEXT_GUIDE.md`](docs/RICH_TEXT_GUIDE.md)、公開型の詳細は [`docs/API.md`](docs/API.md) の Rich text を参照してください。
 
+## 縦書き
+
+ライブラリ全体の既定値は従来どおり横書き (`horizontal-tb`) です。ウィンドウ構築時に `vertical: true` を指定すると、日本語の標準的な列方向である `vertical-rl`（文字は上→下、列/選択項目は右→左）になります。
+
+```ts
+const help = new HelpWindow(scene, config, { vertical: true });
+
+const choice = new ChoiceWindow(scene, config, {
+  input,
+  vertical: true,
+  showScrollbar: true,
+});
+```
+
+明示指定は `writingMode: "horizontal-tb" | "vertical-rl" | "vertical-lr"`。縦書きの選択リストでは `vertical-rl` の index 0 が右端で、←が次項目、→が前項目です。overflow 時は横スクロールします。
+
+日本語縦組みでは、フォントに収録されていれば句読点・括弧類の Unicode 縦書き用字形を優先し、未収録なら元字形へフォールバックします。`ー` 等は回転、小書き仮名は位置補正を行います。フォントごとの字面差があるため、実際の採用 Bitmap Font で `?scene=vertical-writing` を確認してください。
+
+現時点ではルビ、縦中横、完全な禁則処理は対象外です。
+
 ## Phase 2 の追加
 
 ```ts
@@ -184,7 +205,7 @@ chrome 差し替えは `createRenderer` + `createNineSliceWindowRenderer`（テ�
 
 ## MVP 制限
 
-日本語禁則処理なし、グローバル `WindowManager` singleton なし（Scene 所有の `WindowFocusController` はある）、ゲームパッドは first pad only、a11y は意味イベントのみ（DOM overlay なし）。リストは content を超えるとスクロールします。詳細は [`docs/MVP_RELEASE_CHECKLIST.md`](docs/MVP_RELEASE_CHECKLIST.md) と [`docs/PHASE2_RELEASE_CHECKLIST.md`](docs/PHASE2_RELEASE_CHECKLIST.md)。
+完全な日本語禁則処理なし（縦書きの基本グリフ補正は対応）、グローバル `WindowManager` singleton なし（Scene 所有の `WindowFocusController` はある）、ゲームパッドは first pad only、a11y は意味イベントのみ（DOM overlay なし）。リストは content を超えるとスクロールします。詳細は [`docs/MVP_RELEASE_CHECKLIST.md`](docs/MVP_RELEASE_CHECKLIST.md) と [`docs/PHASE2_RELEASE_CHECKLIST.md`](docs/PHASE2_RELEASE_CHECKLIST.md)。
 
 ## 詳細 API
 

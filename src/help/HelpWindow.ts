@@ -1,6 +1,6 @@
 import type Phaser from "phaser";
 import type { WindowConfig } from "../core/types.ts";
-import type { WindowBaseOptions } from "../core/WindowBase.ts";
+import type { TextWindowBaseOptions } from "../text/TextWindowBase.ts";
 import { TextWindowBase } from "../text/TextWindowBase.ts";
 import { flattenRichText } from "../text/richText.ts";
 import type { RichText } from "../text/types.ts";
@@ -11,7 +11,7 @@ import type { RichText } from "../text/types.ts";
 export class HelpWindow extends TextWindowBase {
   private source: string | RichText | null = null;
 
-  public constructor(scene: Phaser.Scene, config: WindowConfig, options: WindowBaseOptions = {}) {
+  public constructor(scene: Phaser.Scene, config: WindowConfig, options: TextWindowBaseOptions = {}) {
     super(scene, config, options);
   }
 

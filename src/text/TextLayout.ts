@@ -14,6 +14,9 @@ import type {
 } from "./types.ts";
 import { BitmapFontNotLoadedError, MissingBitmapGlyphError } from "./types.ts";
 import { assertMeasurerHasGlyphs } from "./fontFallback.ts";
+import { isVerticalWritingMode } from "./writingMode.ts";
+import type { WritingMode } from "./writingMode.ts";
+import { getVerticalGlyphTransform, verticalPresentationForm } from "./verticalGlyphs.ts";
 
 const segmenter =
   typeof Intl !== "undefined" && "Segmenter" in Intl
@@ -493,6 +496,97 @@ function assignPages(lines: LayoutLine[], options: TextLayoutOptions): LayoutLin
   return placed;
 }
 
+function layoutVerticalRichText(
+  styledChars: readonly StyledChar[],
+  measurer: ResolvedBitmapTextMeasurer,
+  options: TextLayoutOptions,
+  align: TextAlign,
+  writingMode: Extract<WritingMode, "vertical-rl" | "vertical-lr">,
+): TextLayoutResult {
+  const defaultMetrics = defaultLineMetrics(measurer, options.style);
+  const columnStep = defaultMetrics.height + options.lineSpacing;
+  const columnsPerPage = Math.max(1, Math.floor((options.width + options.lineSpacing) / columnStep));
+  const rawColumns: LayoutLine[] = [];
+  let columnRuns: LayoutLineRun[] = [];
+  let columnText = "";
+  let columnSourceStart = 0;
+  let columnSourceEnd = 0;
+  let y = 0;
+
+  const flushColumn = (): void => {
+    const logicalColumn = rawColumns.length;
+    const pageIndex = Math.floor(logicalColumn / columnsPerPage);
+    const columnInPage = logicalColumn % columnsPerPage;
+    const x = writingMode === "vertical-rl"
+      ? options.width - columnStep * (columnInPage + 1)
+      : columnStep * columnInPage;
+    rawColumns.push({
+      text: columnText,
+      sourceRange: { start: columnSourceStart, end: columnSourceEnd },
+      width: columnStep,
+      x: Math.max(0, Math.trunc(x)),
+      y: 0,
+      height: Math.max(defaultMetrics.height, y),
+      ascent: defaultMetrics.ascent,
+      pageIndex,
+      align,
+      runs: columnRuns,
+    });
+    columnRuns = [];
+    columnText = "";
+    y = 0;
+  };
+
+  for (const entry of styledChars) {
+    if (entry.char === "\n") {
+      flushColumn();
+      columnSourceStart = entry.sourceIndex + entry.char.length;
+      columnSourceEnd = columnSourceStart;
+      continue;
+    }
+    const metrics = scaleFontMetrics(measurer.fontMetrics(entry.fontKey), entry.fontSize, options.style.scale);
+    const advance = metrics.height + options.style.letterSpacing * options.style.scale;
+    if (columnRuns.length > 0 && y + metrics.height > options.height) {
+      flushColumn();
+      columnSourceStart = entry.sourceIndex;
+    }
+    if (columnRuns.length === 0) {
+      columnSourceStart = entry.sourceIndex;
+    }
+    const transform = getVerticalGlyphTransform(entry.char);
+    const presentation = verticalPresentationForm(entry.char);
+    const renderedChar =
+      presentation !== null &&
+      hasGlyphFor(measurer, entry.fontKey, presentation.codePointAt(0) ?? 0)
+        ? presentation
+        : entry.char;
+    const measured = measurer.measureRun(renderedChar, {
+      fontKey: entry.fontKey,
+      fontSize: entry.fontSize,
+      scale: options.style.scale,
+      letterSpacing: 0,
+    });
+    const em = entry.fontSize * options.style.scale;
+    columnRuns.push({
+      text: renderedChar,
+      fontKey: entry.fontKey,
+      fontSize: entry.fontSize,
+      width: measured.width,
+      x: Math.max(0, Math.trunc((columnStep - measured.width) / 2 + transform.xEm * em)),
+      y: Math.trunc(y + transform.yEm * em),
+      rotationDeg: renderedChar === entry.char ? transform.rotationDeg : 0,
+    });
+    columnText += entry.char;
+    columnSourceEnd = entry.sourceIndex + entry.char.length;
+    y += advance;
+  }
+  if (columnRuns.length > 0 || rawColumns.length === 0) {
+    flushColumn();
+  }
+  const pageCount = rawColumns.length === 0 ? 1 : (rawColumns[rawColumns.length - 1]?.pageIndex ?? 0) + 1;
+  return { lines: rawColumns, pageCount };
+}
+
 /**
  * Greedy style-aware bitmap-font layout without Phaser dependencies.
  * MVP does not implement Japanese kinsoku rules.
@@ -507,6 +601,11 @@ export function layoutRichText(
   const align = resolveRichTextAlign(content, options.align ?? "left");
   const flattened = flattenRichText(content);
   const styledChars = resolveStyledChars(flattened.chars, resolved, options.style);
+
+  const writingMode = options.writingMode ?? "horizontal-tb";
+  if (isVerticalWritingMode(writingMode)) {
+    return layoutVerticalRichText(styledChars, resolved, options, align, writingMode);
+  }
 
   const paragraphs: StyledChar[][] = [];
   let currentParagraph: StyledChar[] = [];

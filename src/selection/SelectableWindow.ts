@@ -1,8 +1,9 @@
 import Phaser from "phaser";
 import type { WindowInputPhase } from "../input/types.ts";
 import type { WindowConfig } from "../core/types.ts";
-import type { WindowBaseOptions } from "../core/WindowBase.ts";
 import { TextWindowBase } from "../text/TextWindowBase.ts";
+import type { TextWindowBaseOptions } from "../text/TextWindowBase.ts";
+import { isVerticalWritingMode } from "../text/writingMode.ts";
 import { assertMeasurerHasGlyphs } from "../text/fontFallback.ts";
 import { scaleFontMetrics } from "../text/fontMetrics.ts";
 import { flattenRichText, resolveRichTextAlign } from "../text/richText.ts";
@@ -22,7 +23,7 @@ import { CursorRenderer } from "./CursorRenderer.ts";
 import { SelectionController } from "./SelectionController.ts";
 import type { SelectableItem, SelectionControllerOptions } from "./types.ts";
 
-export interface SelectableWindowOptions extends WindowBaseOptions, SelectionControllerOptions {
+export interface SelectableWindowOptions extends TextWindowBaseOptions, SelectionControllerOptions {
   readonly rowHeight?: number;
   readonly columnGap?: number;
   readonly rowGap?: number;
@@ -114,7 +115,7 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
   ) {
     super(scene, config, options);
     this.controller = new SelectionController<T>(options);
-    this.scrollController = new ScrollController();
+    this.scrollController = new ScrollController({ axis: isVerticalWritingMode(this.writingMode) ? "x" : "y" });
     this.columns = Math.max(1, options.columns ?? 1);
     this.rowHeight = options.rowHeight ?? this.theme.text.fontSize * this.theme.text.scale + 8;
     this.columnGap = options.columnGap ?? 8;
@@ -352,6 +353,30 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
 
   private relayoutRows(): void {
     const content = this.getContentBounds();
+    if (isVerticalWritingMode(this.writingMode)) {
+      const columnWidth = this.rowHeight;
+      const columnStep = columnWidth + this.columnGap;
+      const visibleColumns = Math.max(1, Math.floor((content.width + this.columnGap) / columnStep));
+      this.rowBounds = this.items.map((_, index) => {
+        const logicalColumn = index;
+        const x = this.writingMode === "vertical-rl"
+          ? content.width - columnWidth - logicalColumn * columnStep
+          : logicalColumn * columnStep;
+        return { index, x, y: 0, width: columnWidth, height: content.height };
+      });
+      const requiredWidth = this.items.length === 0
+        ? 0
+        : this.items.length * columnWidth + Math.max(0, this.items.length - 1) * this.columnGap;
+      this.scrollEnabled = requiredWidth > content.width;
+      this.scrollController.setViewportSize(content.width);
+      this.scrollController.setContentSize(requiredWidth);
+      if (!this.scrollEnabled || this.items.length <= visibleColumns) {
+        this.scrollController.setOffset(0);
+      }
+      this.applyScrollOffset();
+      return;
+    }
+
     const columnWidth = Math.floor(
       (content.width - this.columnGap * (this.columns - 1)) / this.columns,
     );
@@ -403,12 +428,13 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
         },
         lineSpacing: 0,
         align: "left",
+        writingMode: this.writingMode,
       });
       const line = layout.lines[0];
       if (line === undefined) {
         continue;
       }
-      const alignOffset = computeRowLabelAlignOffset(align, line.width, bounds.width);
+      const alignOffset = isVerticalWritingMode(this.writingMode) ? 0 : computeRowLabelAlignOffset(align, line.width, bounds.width);
       for (const run of line.runs) {
         this.ensureRowLabelCount(slot + 1);
         const label = this.rowLabels[slot];
@@ -420,14 +446,15 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
         label.setFontSize(run.fontSize);
         label.setScale(style.scale);
         label.setLetterSpacing(style.letterSpacing);
+        label.setRotation(((run.rotationDeg ?? 0) * Math.PI) / 180);
         const runAscent = scaleFontMetrics(
           this.measurer.fontMetrics(run.fontKey),
           run.fontSize,
           style.scale,
         ).ascent;
         label.setPosition(
-          Math.trunc(bounds.x + alignOffset + run.x),
-          Math.trunc(bounds.y + 4 + line.ascent - runAscent),
+          Math.trunc(bounds.x + alignOffset + (line.x ?? 0) + run.x),
+          Math.trunc(bounds.y + 4 + (run.y ?? 0) + (isVerticalWritingMode(this.writingMode) ? 0 : line.ascent - runAscent)),
         );
         label.setTint(item.enabled ? style.tint : 0x888888);
         label.setAlpha(item.enabled ? 1 : 0.5);
@@ -466,10 +493,13 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
   private hitTestRow(localX: number, localY: number): number | null {
     const content = this.getContentBounds();
     const offset = this.scrollEnabled ? this.scrollController.getBounds().offset : 0;
+    const adjustedX = isVerticalWritingMode(this.writingMode)
+      ? localX + (this.writingMode === "vertical-rl" ? -offset : offset)
+      : localX;
     return hitTestRowAtContentLocal(
-      localX,
+      adjustedX,
       localY,
-      offset,
+      isVerticalWritingMode(this.writingMode) ? 0 : offset,
       content.width,
       content.height,
       this.scrollbar?.getTrackRect() ?? null,
@@ -478,6 +508,20 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
   }
 
   private getVisibleRowRange(): { start: number; end: number } {
+    if (isVerticalWritingMode(this.writingMode)) {
+      if (this.rowBounds.length === 0) return { start: 0, end: -1 };
+      const offset = this.scrollEnabled ? this.scrollController.getBounds().offset : 0;
+      const viewport = this.getContentBounds().width;
+      let start = this.rowBounds.length;
+      let end = -1;
+      for (const row of this.rowBounds) {
+        const shiftedX = row.x + (this.writingMode === "vertical-rl" ? offset : -offset);
+        if (shiftedX + row.width < -this.rowOverscanPx || shiftedX > viewport + this.rowOverscanPx) continue;
+        start = Math.min(start, row.index);
+        end = Math.max(end, row.index);
+      }
+      return end < start ? { start: 0, end: -1 } : { start, end };
+    }
     const offset = this.scrollEnabled ? this.scrollController.getBounds().offset : 0;
     return computeVisibleRowRange(
       this.rowBounds.map((row) => row.y),
@@ -489,30 +533,32 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
   }
 
   private ensureSelectedVisible(): void {
-    if (!this.scrollEnabled) {
-      return;
-    }
+    if (!this.scrollEnabled) return;
     const index = this.controller.getSelectedIndex();
     const bounds = index >= 0 ? this.rowBounds[index] : undefined;
-    if (bounds === undefined) {
+    if (bounds === undefined) return;
+    const currentOffset = this.scrollController.getBounds().offset;
+    if (isVerticalWritingMode(this.writingMode)) {
+      const viewport = this.getContentBounds().width;
+      const physicalStart = this.writingMode === "vertical-rl" ? -bounds.x - bounds.width : bounds.x;
+      const physicalEnd = physicalStart + bounds.width;
+      const nextOffset = computeScrollOffsetToReveal(physicalStart, physicalEnd, viewport, currentOffset);
+      if (nextOffset !== null) this.scrollController.setOffset(nextOffset);
       return;
     }
     const viewport = this.getContentBounds().height;
-    const currentOffset = this.scrollController.getBounds().offset;
-    const nextOffset = computeScrollOffsetToReveal(
-      bounds.y,
-      bounds.y + bounds.height,
-      viewport,
-      currentOffset,
-    );
-    if (nextOffset !== null) {
-      this.scrollController.setOffset(nextOffset);
-    }
+    const nextOffset = computeScrollOffsetToReveal(bounds.y, bounds.y + bounds.height, viewport, currentOffset);
+    if (nextOffset !== null) this.scrollController.setOffset(nextOffset);
   }
 
   private applyScrollOffset(): void {
     const offset = this.scrollController.getBounds().offset;
-    this.scrollBody.setPosition(0, this.scrollEnabled ? -offset : 0);
+    if (isVerticalWritingMode(this.writingMode)) {
+      const direction = this.writingMode === "vertical-rl" ? 1 : -1;
+      this.scrollBody.setPosition(this.scrollEnabled ? direction * offset : 0, 0);
+    } else {
+      this.scrollBody.setPosition(0, this.scrollEnabled ? -offset : 0);
+    }
     this.cullScrollBody();
   }
 
@@ -520,7 +566,7 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
     this.scrollClip.cullChildren(
       this.scrollBody,
       this.scrollEnabled ? this.scrollController.getBounds().offset : 0,
-      "y",
+      isVerticalWritingMode(this.writingMode) ? "x" : "y",
     );
   }
 }

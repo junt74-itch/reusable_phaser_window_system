@@ -43,13 +43,15 @@ export class ScrollContentClip {
     if (this.destroyed) {
       return;
     }
-    const viewportStart = scrollOffset;
-    const viewportEnd = scrollOffset + (axis === "x" ? this.width : this.height);
+    // Children are already translated by the scroll body. Cull in viewport-local
+    // coordinates rather than applying the logical scroll offset a second time.
+    const viewportStart = 0;
+    const viewportEnd = axis === "x" ? this.width : this.height;
     for (const child of body.list) {
       if (!(child instanceof Phaser.GameObjects.BitmapText)) {
         continue;
       }
-      this.applyCull(child, 0, viewportStart, viewportEnd, axis);
+      this.applyCull(child, axis === "x" ? body.x : body.y, viewportStart, viewportEnd, axis);
     }
   }
 
