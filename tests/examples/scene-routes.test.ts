@@ -97,3 +97,10 @@ describe("TASK-180 isolation", () => {
     expect(keys.includes("add.text")).toBe(false);
   });
 });
+
+
+describe("vertical writing sandbox route", () => {
+  test("is registered in the public sandbox scene keys", () => {
+    expect(ALL_SCENE_KEYS).toContain("vertical-writing");
+  });
+});
