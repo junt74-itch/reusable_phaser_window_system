@@ -63,3 +63,29 @@ describe("SelectionController", () => {
     expect(cancels).toBe(1);
   });
 });
+
+
+describe("vertical writing navigation", () => {
+  const verticalItems = [
+    { id: "a", label: "一", value: 1, enabled: true },
+    { id: "b", label: "二", value: 2, enabled: true },
+    { id: "c", label: "三", value: 3, enabled: true },
+  ];
+
+  test("vertical-rl advances through items with left", () => {
+    const controller = new SelectionController<number>({ writingMode: "vertical-rl", wrap: false });
+    controller.setItems(verticalItems);
+    expect(controller.getSelectedIndex()).toBe(0);
+    controller.move("left");
+    expect(controller.getSelectedIndex()).toBe(1);
+    controller.move("right");
+    expect(controller.getSelectedIndex()).toBe(0);
+  });
+
+  test("vertical-lr advances through items with right", () => {
+    const controller = new SelectionController<number>({ writingMode: "vertical-lr", wrap: false });
+    controller.setItems(verticalItems);
+    controller.move("right");
+    expect(controller.getSelectedIndex()).toBe(1);
+  });
+});
