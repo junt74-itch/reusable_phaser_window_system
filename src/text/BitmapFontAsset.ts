@@ -7,6 +7,6 @@ export interface BitmapFontAsset {
 
 export const DEFAULT_BITMAP_FONT_ASSET: BitmapFontAsset = {
   key: "jf-dot-mplus12",
-  textureURL: `${import.meta.env.BASE_URL}examples/assets/fonts/jf-dot-mplus12/font.png`,
-  fontDataURL: `${import.meta.env.BASE_URL}examples/assets/fonts/jf-dot-mplus12/font.xml`,
+  textureURL: new URL("../../examples/assets/fonts/jf-dot-mplus12/font.png", import.meta.url).href,
+  fontDataURL: new URL("../../examples/assets/fonts/jf-dot-mplus12/font.xml", import.meta.url).href,
 };
