@@ -446,6 +446,7 @@ export abstract class SelectableWindow<T> extends TextWindowBase {
         label.setFontSize(run.fontSize);
         label.setScale(style.scale);
         label.setLetterSpacing(style.letterSpacing);
+        label.setRotation(((run.rotationDeg ?? 0) * Math.PI) / 180);
         const runAscent = scaleFontMetrics(
           this.measurer.fontMetrics(run.fontKey),
           run.fontSize,
