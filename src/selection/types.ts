@@ -16,6 +16,8 @@ export interface SelectionSubscription {
 }
 
 export interface SelectionControllerOptions {
+  readonly writingMode?: import("../text/writingMode.ts").WritingMode;
+  readonly vertical?: boolean;
   readonly columns?: number;
   readonly wrap?: boolean;
   readonly onConfirm?: () => void;
