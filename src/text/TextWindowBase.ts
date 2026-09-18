@@ -28,7 +28,7 @@ export abstract class TextWindowBase extends WindowBase {
   protected measurer: OwnedBitmapTextMeasurer;
   protected readonly textObjects: Phaser.GameObjects.BitmapText[] = [];
   private currentLayout: TextLayoutResult | null = null;
-  private readonly writingMode: WritingMode;
+  protected readonly writingMode: WritingMode;
 
   public constructor(scene: Phaser.Scene, config: WindowConfig, options: TextWindowBaseOptions = {}) {
     super(scene, config, options);
