@@ -90,6 +90,7 @@ export type { BitmapFontAsset } from "./text/BitmapFontAsset.ts";
 export { PhaserBitmapTextMeasurer } from "./text/PhaserBitmapTextMeasurer.ts";
 export { FallbackBitmapTextMeasurer, createBitmapTextMeasurer } from "./text/FallbackBitmapTextMeasurer.ts";
 export { TextWindowBase } from "./text/TextWindowBase.ts";
+export type { TextWindowBaseOptions } from "./text/TextWindowBase.ts";
 
 export type { MessageToken, MessageParseResult, MessagePortraitOptions, MessageAudioHooks } from "./message/types.ts";
 export { MissingMessagePortraitError } from "./message/types.ts";
