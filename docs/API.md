@@ -114,6 +114,30 @@ Help / Log / Document / Message の本文は常時 wrap します。Choice / Com
 
 sandbox: `?scene=rich-text`（Help / Log / Message / Choice の RichText デモ）。
 
+## Vertical writing
+
+`TextWindowBaseOptions` / selectable window options accept `vertical?: boolean` and `writingMode?: WritingMode`. The library default is `horizontal-tb`; `vertical: true` resolves to Japanese-style `vertical-rl`.
+
+```ts
+new HelpWindow(scene, config, { vertical: true });
+new ChoiceWindow(scene, config, { input, writingMode: "vertical-rl" });
+```
+
+| API / type | Contract |
+|---|---|
+| `WritingMode` | `"horizontal-tb" | "vertical-rl" | "vertical-lr"` |
+| `resolveWritingMode()` | resolves convenience/default options |
+| `DEFAULT_WRITING_MODE` | `horizontal-tb` |
+| `DEFAULT_VERTICAL_WRITING_MODE` | `vertical-rl` |
+| `getVerticalGlyphTransform()` | font-independent Japanese vertical glyph hints |
+| `verticalPresentationForm()` | returns Unicode vertical presentation form when defined |
+
+In `vertical-rl`, glyphs advance top-to-bottom and columns/items advance right-to-left. Selectable overflow uses the x axis; Left advances to the next item and Right returns to the previous item. `vertical-lr` mirrors the column/navigation direction.
+
+Punctuation and brackets prefer Unicode vertical presentation forms only when the active bitmap font contains them. Otherwise the original glyph is retained. Prolonged-sound/dash-like marks carry rotation hints and small kana receive an optical offset. Ruby, tate-chu-yoko, and complete kinsoku processing are not currently implemented.
+
+Sandbox: `?scene=vertical-writing`.
+
 ## Scene セットアップ
 
 ```ts
