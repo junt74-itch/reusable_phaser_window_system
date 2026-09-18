@@ -557,7 +557,7 @@ function layoutVerticalRichText(
     const presentation = verticalPresentationForm(entry.char);
     const renderedChar =
       presentation !== null &&
-      hasGlyphFor(measurer, entry.fontKey, presentation.codePointAt(0) ?? 0)
+      measurer.hasGlyphFor(entry.fontKey, presentation.codePointAt(0) ?? 0)
         ? presentation
         : entry.char;
     const measured = measurer.measureRun(renderedChar, {
@@ -604,7 +604,13 @@ export function layoutRichText(
 
   const writingMode = options.writingMode ?? "horizontal-tb";
   if (isVerticalWritingMode(writingMode)) {
-    return layoutVerticalRichText(styledChars, resolved, options, align, writingMode);
+    return layoutVerticalRichText(
+      styledChars,
+      resolved,
+      options,
+      align,
+      writingMode as Extract<WritingMode, "vertical-rl" | "vertical-lr">,
+    );
   }
 
   const paragraphs: StyledChar[][] = [];
