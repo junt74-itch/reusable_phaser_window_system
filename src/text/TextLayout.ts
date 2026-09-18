@@ -16,6 +16,7 @@ import { BitmapFontNotLoadedError, MissingBitmapGlyphError } from "./types.ts";
 import { assertMeasurerHasGlyphs } from "./fontFallback.ts";
 import { isVerticalWritingMode } from "./writingMode.ts";
 import type { WritingMode } from "./writingMode.ts";
+import { getVerticalGlyphTransform, verticalPresentationForm } from "./verticalGlyphs.ts";
 
 const segmenter =
   typeof Intl !== "undefined" && "Segmenter" in Intl
@@ -552,19 +553,28 @@ function layoutVerticalRichText(
     if (columnRuns.length === 0) {
       columnSourceStart = entry.sourceIndex;
     }
-    const measured = measurer.measureRun(entry.char, {
+    const transform = getVerticalGlyphTransform(entry.char);
+    const presentation = verticalPresentationForm(entry.char);
+    const renderedChar =
+      presentation !== null &&
+      measurer.hasGlyphFor(entry.fontKey, presentation.codePointAt(0) ?? 0)
+        ? presentation
+        : entry.char;
+    const measured = measurer.measureRun(renderedChar, {
       fontKey: entry.fontKey,
       fontSize: entry.fontSize,
       scale: options.style.scale,
       letterSpacing: 0,
     });
+    const em = entry.fontSize * options.style.scale;
     columnRuns.push({
-      text: entry.char,
+      text: renderedChar,
       fontKey: entry.fontKey,
       fontSize: entry.fontSize,
       width: measured.width,
-      x: Math.max(0, Math.trunc((columnStep - measured.width) / 2)),
-      y: Math.trunc(y),
+      x: Math.max(0, Math.trunc((columnStep - measured.width) / 2 + transform.xEm * em)),
+      y: Math.trunc(y + transform.yEm * em),
+      rotationDeg: renderedChar === entry.char ? transform.rotationDeg : 0,
     });
     columnText += entry.char;
     columnSourceEnd = entry.sourceIndex + entry.char.length;
