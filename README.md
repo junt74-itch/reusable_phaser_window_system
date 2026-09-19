@@ -203,6 +203,10 @@ chrome 差し替えは `createRenderer` + `createNineSliceWindowRenderer`（テ�
 - **Canvas** では GeometryMask fallback。未サポート renderer では `ContentClipperUnsupportedError`
 - ゲームパッド: 接続された **最初の 1 台のみ** ポーリング（MVP 制限）
 
+## TODO
+
+- ビットマップフォントのビルド時に、記号・小書き文字など任意の文字を**文字単位で指定画像へ差し替えられる仕組み**を追加する。縦書きで専用字形が必要な句読点・括弧・長音・小書き仮名等の調整にも利用できるよう、`reusable_pixel_font_builder` 側との連携・仕様化を検討する。
+
 ## MVP 制限
 
 完全な日本語禁則処理なし（縦書きの基本グリフ補正は対応）、グローバル `WindowManager` singleton なし（Scene 所有の `WindowFocusController` はある）、ゲームパッドは first pad only、a11y は意味イベントのみ（DOM overlay なし）。リストは content を超えるとスクロールします。詳細は [`docs/MVP_RELEASE_CHECKLIST.md`](docs/MVP_RELEASE_CHECKLIST.md) と [`docs/PHASE2_RELEASE_CHECKLIST.md`](docs/PHASE2_RELEASE_CHECKLIST.md)。
