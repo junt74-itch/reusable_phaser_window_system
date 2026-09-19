@@ -20,7 +20,7 @@
     "test:package": "bun test tests/package",
     "typecheck": "tsc --noEmit",
     "build": "vite build && tsc -p tsconfig.build.json --emitDeclarationOnly",
-    "build:pages": "vite build --mode pages",
+    "build:pages": "vite build --mode pages && mkdir -p dist-pages/examples && cp -R examples/assets dist-pages/examples/assets",
     "check": "bun run test:unit && bun run typecheck && bun run build && bun run test:package && bun run typecheck:consumer",
     "typecheck:consumer": "tsc --noEmit -p tsconfig.consumer.json",
     "font:sync": "bun run scripts/sync-font-assets.ts"
